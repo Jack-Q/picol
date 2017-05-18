@@ -50,29 +50,14 @@
   \subsection{Overview}
 
   Keywords: the following words are preserved for use by language.
-  
-
-
-  $$\begin{array}{rrl}
-    Statement & \to & \{ StatementSequence \}  \\
-              &   | & Function                 \\
-              &   | & Declaration;             \\
-              &   | & Expression;              \\
-              &   | & return Expression;       \\
-              &   | & break;                 \\
-              &   | & continue;                 \\
-              &   | &                  \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-              &   | & Function                 \\
-    
-    Function  & \to & TypeExpr \cdot Id \cdot ( \cdot ArgList \cdot ) \cdot \{ \cdot StatSeq \cdot \} \\
-  \end{array}$$
+   
+    \begin{center}
+      \begin{tcolorbox}[breakable, blanker, width=0.8\linewidth]
+        \begin{minted}[autogobble, obeytabs, resetmargins, fontsize=\footnotesize]{javascript}
+        return while if else switch case do 
+        \end{minted}
+      \end{tcolorbox}
+    \end{center}
 
 \begin{grammar}
   <statement> ::= `(' <statement> `)'
@@ -85,25 +70,96 @@
              \alt `return' <expression>
 \end{grammar}
 
-% This sections contains the language expressed as a specific BNF syntax
-% The ``rail'' environment will abstract the content 
-\begin{rail}
-  statement : '{' statement-sequence '}'
-            | function-declaration
-            | 
-            ;
+\end{multicols}
 
-  statement-sequence : statement statement-sequence
-                     | statement;
+\begin{center}
+    % This sections contains the language expressed as a specific BNF syntax
+    % The ``rail'' environment will abstract the content 
+    % This process can be finished via the shell script helper in this folder
+    \begin{rail}
+      Statement : '\{' StatementSequence '\}'
+                | FunctionDeclaration
+                | 'return' Expression ';'
+                | Expression ';'
+                | Declaration ';'
+                | 'if' '(' Expression ')' Statement
+                | 'if' '(' Expression ')' Statement 'else' Statement
+                | 'break' ';'
+                | 'continue' ';'
+                | 'switch' '(' Expression ')' '\{' OptionList '\}'
+                | 'do' Statement 'while' '(' Expression ')' ';'
+                | 'while' '(' Expression ')' Statement
+                ;      
+    \end{rail}
+\end{center}
   
-  function-declaration : ;
-  expression : term | expression '+' term;
-  term       : factor | term '*' factor;
-  factor     : constant | variable | '(' expression ')';
-  variable   : 'x' | 'y' | 'z' ;
-  constant   : digit | digit constant;
-  digit      : '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
-\end{rail}
+\begin{multicols}{2}
+
+  \begin{rail}
+    StatementSequence : Statement StatementSequence | ();
+
+    FunctionDeclaration : Type Identifier '(' ParameterList ')' \\
+                        '\{' StatementSequence '\}';
+    
+    Declaration : PrimitiveType DeclareList | ArrayType Identifier;
+
+    DeclareList : DeclareItem | DeclareItem ',' DeclareList;
+
+    DeclareItem : Identifier | Identifier ':=' Expression;
+
+    ParameterList : () | Type Identifier | Type Identifier ',' ParameterList ;
+    Type: PrimitiveType | ArrayType;
+    ArrayType : Type '[' ArrayDimension ']';
+    ArrayDimension : IntegerLiteral | IntegerLiteral ',' ArrayDimension;
+    PrimitiveType : 'int' | 'float' | 'char' | 'bool';
+
+    OptionList : 'case' Expression ':' \\
+                  Statement OptionList
+              | 'default' ':' Statement
+              | ()
+              ;
+  \end{rail}
+  
+  
+    \begin{rail}      
+      Expression : LeftValue AssignOperator Expression
+                  | Expression BinaryOperator Expression
+                  | LeftValue SelfModification
+                  | SelfModification LeftValue
+                  | LeftUnaryOperator Expression
+                  | '(' Expression ')'
+                  | Identifier '(' ArgumentList ')'
+                  | LeftValue
+                  | ConstantLiteral
+                  ;
+      LeftValue : Identifier
+                | LeftValue '[' ArgumentList ']'
+                ;
+      AssignOperator : ':=' | '+=' | '-=' | '*=' | '/=';
+      BinaryOperator : '+' | '-' | '*' | '/' 
+                      | '>' | '>=' | '<' | '<=' | '=' | '!=' 
+                      | '\&\&' | '||';
+      SelfModification : '++' | '--';
+      LeftUnaryOperator : '!' ;
+      ArgumentList : () | Expression ArgumentListMore;
+      ArgumentListMore : () | ',' Expression ArgumentListMore;
+
+    \end{rail}
+
+    \begin{rail}
+      Identifier : IdentifierStart IdentifierMid;
+      ConstantLiteral : IntegerLiteral | CharLiteral | FloatLiteral | BooleanLiteral;
+      IdentifierMid: () | Digit IdentifierMid | IdentifierStart IdentifierMid;
+      IdentifierStart: Letter | '\_';
+      IntegerLiteral: '0' | DigitNonZero IntegerLiteralMid;
+      IntegerLiteralMid : () | Digit IntegerLiteralMid;
+      FloatLiteral: IntegerLiteral '.' IntegerLiteralMid;
+      BooleanLiteral: 'true' | 'false';
+      CharLiteral: "'" '$Ascii Chars$' "'";
+      Letter : 'a $\ldots$ z' | 'A $\ldots$ Z';
+      Digit : '0' | DigitNonZero ;
+      DigitNonZero : '1 $\ldots$ 9';
+    \end{rail}
 
   \end{multicols}
 
