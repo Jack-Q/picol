@@ -1,4 +1,4 @@
-.vscode
+/.vscode/*
 node_modules
 build
 *.dot
@@ -7,3 +7,5 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+flow-typed
+!/.vscode/settings.json

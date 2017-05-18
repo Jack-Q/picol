@@ -4,6 +4,7 @@
 </template>
 
 <script>
+// @flow
 import MonacoEditor from 'vue-monaco-editor';
 
 const editorOptions = {
@@ -15,7 +16,7 @@ const editorOptions = {
   glyphMargin: true,
 };
 
-const defaultCodeSnippet =
+const defaultCodeSnippet: string =
 `// Feel free to explore the World of Picol
 int main () {
   // Declare an matrix of matrix

@@ -5,6 +5,7 @@
 </template>
 
 <script>
+// @flow
 export default {
   name: 'app',
 };

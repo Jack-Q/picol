@@ -11,7 +11,7 @@ module.exports = {
   },
   extends: 'airbnb-base',
   // required to lint *.vue files
-  plugins: ['html'],
+  plugins: ['html', 'flowtype-errors'],
   settings: {
     'import/resolver': {
       webpack: {
@@ -30,6 +30,7 @@ module.exports = {
       ? 2
       : 0,
     // no extension at import for all file extensions
-    'import/extensions': [2, "never"]
+    'import/extensions': [2, "never"],
+    "flowtype-errors/show-errors": 2
   }
 }
