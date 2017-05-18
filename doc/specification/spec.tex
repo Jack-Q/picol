@@ -1,0 +1,110 @@
+%!TEX program = xelatex
+%!TEX option = -shell-escape -8bit
+\documentclass[a4paper, 11.5pt]{article}
+\usepackage[margin={2cm,1.9cm},includefoot]{geometry}
+\usepackage{amsmath} % Package for math formula, symbols, etc
+\usepackage{amsfonts} % Package for extra math font package
+\usepackage{tikz} % Package for vector graphic drawing
+\usepackage{csquotes} % Package for qouted fragment
+  \usepackage{fontspec}
+  \usepackage{hyperref} % use this to support hyper-liniks
+  \hypersetup{
+    colorlinks=true,
+    linkcolor=gray,
+    filecolor=magenta,
+    urlcolor=gray,
+  }
+  \urlstyle{same}
+  \usepackage[skins,breakable]{tcolorbox}
+  \usepackage{minted}
+  \usemintedstyle{bw} % use bw style since the asm code can't be well-highlighted
+  \usepackage{xcolor}
+  \renewcommand\theFancyVerbLine{\textcolor{gray}{\normalsize\arabic{FancyVerbLine}}}
+\usepackage{multicol}
+\usepackage{lineno}
+\setlength{\columnsep}{0.5cm}
+\usepackage{enumitem}
+\usepackage{syntax}
+\setlength{\grammarparsep}{20pt plus 1pt minus 1pt} % increase separation between rules
+\setlength{\grammarindent}{8em} % increase separation between LHS/RHS 
+\usepackage{rail/rail}
+\setlength{\parskip}{15pt}
+\setlength{\parindent}{1em}
+\setmainfont{Times New Roman}
+\setmonofont{Monaco}
+
+
+\title{Picol Language Specification}
+\author{Jack Q}
+\begin{document}
+\maketitle
+
+  \begin{multicols}{2}
+
+  \section{Introduction}
+  {\bfseries Picol} (\emph{Pico-Language}) is a small language for demonstrative purpose. 
+  The name of Picol follows its simple and limited feature.
+
+  \section{Syntax}
+
+  \subsection{Overview}
+
+  Keywords: the following words are preserved for use by language.
+  
+
+
+  $$\begin{array}{rrl}
+    Statement & \to & \{ StatementSequence \}  \\
+              &   | & Function                 \\
+              &   | & Declaration;             \\
+              &   | & Expression;              \\
+              &   | & return Expression;       \\
+              &   | & break;                 \\
+              &   | & continue;                 \\
+              &   | &                  \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+              &   | & Function                 \\
+    
+    Function  & \to & TypeExpr \cdot Id \cdot ( \cdot ArgList \cdot ) \cdot \{ \cdot StatSeq \cdot \} \\
+  \end{array}$$
+
+\begin{grammar}
+  <statement> ::= `(' <statement> `)'
+             \alt <function>
+             \alt `return' <expression>
+\end{grammar}
+\begin{grammar}
+ <statement> ::= `(' <statement> `)'
+             \alt <function>
+             \alt `return' <expression>
+\end{grammar}
+
+% This sections contains the language expressed as a specific BNF syntax
+% The ``rail'' environment will abstract the content 
+\begin{rail}
+  statement : '{' statement-sequence '}'
+            | function-declaration
+            | 
+            ;
+
+  statement-sequence : statement statement-sequence
+                     | statement;
+  
+  function-declaration : ;
+  expression : term | expression '+' term;
+  term       : factor | term '*' factor;
+  factor     : constant | variable | '(' expression ')';
+  variable   : 'x' | 'y' | 'z' ;
+  constant   : digit | digit constant;
+  digit      : '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+\end{rail}
+
+  \end{multicols}
+
+\end{document}

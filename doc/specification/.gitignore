@@ -1,0 +1,10 @@
+*.rai
+*.rao
+*.o
+*.out
+*.aux
+*.fls
+*.log
+_minted*
+*.fdb*
+*.pdf
