@@ -4,11 +4,13 @@
   </div>
 </template>
 
-<script>
-// @flow
-export default {
-  name: 'app',
-};
+<script lang='ts'>
+import { Component, Vue } from 'av-ts';
+
+@Component()
+export default class App extends Vue {
+  name: 'app'
+}
 </script>
 
 <style>
