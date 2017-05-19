@@ -1,6 +1,6 @@
 const global = window as any;
 
-const load = (srcPath : String, callback : () => void) : void => {
+const load = (srcPath: string, callback: () => void) : void => {
   if (global.monaco) {
     callback();
     return;
@@ -8,8 +8,8 @@ const load = (srcPath : String, callback : () => void) : void => {
 
   const config = {
     paths: {
-      vs: `${srcPath}/vs`
-    }
+      vs: `${srcPath}/vs`,
+    },
   };
 
   const loaderUrl = `${config.paths.vs}/loader.js`;

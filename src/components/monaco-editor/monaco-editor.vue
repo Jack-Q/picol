@@ -4,7 +4,7 @@
 
 <script lang='ts'>
 import { Component, Vue, p, Prop, Lifecycle, Watch } from 'av-ts';
-import debounce from 'lodash.debounce';
+import { debounce } from 'lodash';
 import monacoLoader from './monaco-loader';
 
 @Component({
@@ -95,7 +95,8 @@ export default class MonacoEditor extends Vue {
   }
 
   fetchEditor() {
-    monacoLoader.load(this.srcPath || '', this.createMonaco);
+    const path: string = this.srcPath as string || '';
+    monacoLoader.load(path, this.createMonaco);
   }
 
   createMonaco() {
