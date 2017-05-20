@@ -5,10 +5,9 @@
   "author": "Jack Q <QiaoBo@outlook.com>",
   "repository": "https://github.com/Jack-Q/picol",
   "scripts": {
-    "dev": "node build/dev-server.js",
-    "start": "node build/dev-server.js",
-    "build": "node build/build.js",
-    "lint": "eslint --ext .js,.vue src"
+    "dev": "node web/build/dev-server.js",
+    "start": "node web/build/dev-server.js",
+    "build": "node web/build/build.js"
   },
   "dependencies": {
     "av-ts": "^0.7.2",

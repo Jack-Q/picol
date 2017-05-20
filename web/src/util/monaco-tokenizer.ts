@@ -1,4 +1,4 @@
-///  path="node_modules/monaco-editor/monaco.d.ts" />
+///  path="monaco-editor/monaco.d.ts" />
 import picolLanguage from './picol-monarch-language';
 import picolSample from './picol-sample';
 

@@ -4,7 +4,7 @@
 </template>
 
 <script lang="ts">
-/// <reference path="../../node_modules/monaco-editor/monaco.d.ts" />
+/// <reference path="../../../node_modules/monaco-editor/monaco.d.ts" />
 import { Component, Vue } from 'av-ts';
 import MonacoTokenizer from '../util/monaco-tokenizer';
 import MonacoEditor from './monaco-editor/monaco-editor';
