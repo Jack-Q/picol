@@ -65,7 +65,7 @@ const picolLanguage: IPicolMonarchLanguage = {
             '@default': 'identifier',
           },
         }],
-        [/'(?:\\["'\\tnb]|[^\\'])'/, 'string'], // char
+        [/'(?:\\["'\\tnr]|[^\\'])'/, 'string'], // char
         [/'(?:\\'|[^'])*'/, 'error'], // char with multiple entries
         [/'(?:\\'|[^'])*/, 'error'], // unclosed char sequence cannot across multiple lines
 

@@ -1,4 +1,5 @@
 import Main from './main';
+import { Token, TokenType } from './token';
 
 const testCode = `// Complete Sample
 // This sample tries to cover every language features in one file
@@ -42,5 +43,15 @@ int main(){
 const lexer = Main.lexer(testCode);
 
 for (const token of lexer) {
-  console.log(token);
+  // Colorize the error output
+  if (token.type === TokenType.INV_NO_MATCH || token.type === TokenType.INV_VALUE) {
+    console.error(
+      '\x1b[1;35m' + TokenType[token.type], '\t',
+      JSON.stringify(token.literal), '\t',
+      token.value || '',
+      '\x1b[0m',
+    );
+  } else {
+    console.log(TokenType[token.type], '\t', JSON.stringify(token.literal), '\t', token.value || '');
+  }
 }
