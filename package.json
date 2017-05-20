@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "node web/build/dev-server.js",
     "start": "node web/build/dev-server.js",
-    "build": "node web/build/build.js"
+    "build": "node web/build/build.js",
+    "core": "npm run build:core && node dist/core/cli",
+    "dev:core": "tsc -p core -w",
+    "build:core": "tsc -p core"
   },
   "dependencies": {
     "av-ts": "^0.7.2",
