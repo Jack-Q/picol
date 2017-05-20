@@ -9,31 +9,12 @@ import { Component, Vue } from 'av-ts';
 import MonacoTokenizer from '../util/monaco-tokenizer';
 import MonacoEditor from './monaco-editor/monaco-editor';
 
-const editorOptions = {
-  selectOnLineNumbers: true,
-  roundedSelection: true,
-  readOnly: false,
-  cursorStyle: 'line',
-  automaticLayout: true,
-  glyphMargin: true,
-  language: 'Picol',
-  theme: 'PicolTheme',
-};
-
 const loadLanguage = (): void => {
   const g: any = window;
   if (g.monaco) {
     MonacoTokenizer.registerLanguage(g.monaco);
   }
 };
-
-const defaultCodeSnippet =
-`// Feel free to explore the World of Picol
-int main () {
-  // Declare an matrix of matrix
-  float[2,2][2,2] a;
-  int i = 0, j = 0;
-}`;
 
 @Component({
   components: {
@@ -42,8 +23,8 @@ int main () {
 })
 export default class Hello extends Vue {
   name = 'hello'
-  code = defaultCodeSnippet
-  editorOptions = editorOptions
+  code = MonacoTokenizer.picolSample.default
+  editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
 
   editorMounted() {
     // eslint-disable-next-line
