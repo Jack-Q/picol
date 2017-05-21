@@ -1,5 +1,4 @@
-import { default } from './main';
-import { IPosition, operators, OperatorToken, Token, TokenType } from './token';
+import { IPosition, Token, TokenType } from './token';
 
 export class LexerError extends Error {
   public pos: IPosition;
@@ -62,18 +61,18 @@ const matchers:
       const literal = util.peekIf(peek, () => true);
       const initPos = { ...getPos() };
       adv(literal.length - 1 + 1); // 1 more advance to skip the new line
-      return new Token(TokenType.SP_COMMENT_LINE, literal, initPos);
+      return new Token(TokenType.SP_COMMENT_LN, literal, initPos);
     } else {
       return null;
     }
   },
-  // Match identifier
+  // Match identifier, keyword, build-in type
   (ch, adv, peek, getPos) => {
     if (util.isIdentifierStart(ch)) {
       const literal = util.peekIf(peek, util.isIdentifierMid);
       const initPos = { ...getPos() };
       adv(literal.length - 1);
-      return new Token(TokenType.ID_NAME, literal, initPos);
+      return Token.createIdentifierToken(literal, initPos);
     }
     return null;
   },
@@ -165,16 +164,14 @@ const matchers:
     const initPos = { ...getPos() };
     if (operatorSymbols.indexOf(ch) >= 0) {
       if (operatorSymbols.indexOf(peek()) >= 0) {
-        const op = ch + peek();
-        if (operators.indexOf(op) > 0) {
+        const op = Token.createOperatorToken(ch + peek(), initPos);
+        if (op) {
           adv(1);
-          return new OperatorToken(op, initPos);
+          return op;
         }
       }
-      const op = ch;
-      if (operators.indexOf(op) > 0) {
-        return new OperatorToken(op, initPos);
-      }
+      const op = Token.createOperatorToken(ch, initPos);
+      if (op) { return op; }
     }
     return null;
   },
