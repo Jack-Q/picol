@@ -61,7 +61,15 @@ const printToken = (tokenIterator: Iterable<Token>): void => {
 const simpleTestCode = `
 int a := -20, b, c;
 int b := 1000;
-// b := a + b;
+123;
++123;
+i++;
++ +((i))++;
+123 + 123;
+123 * 123;
+123 + 123 * 123;
+b := a + b;
+x := y + z || a + (b / 2) * 3 && d + e + f-- - g++;
 `;
 
 const simpleLexer = Main.lexer(simpleTestCode);

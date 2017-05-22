@@ -29,7 +29,7 @@ export enum TokenType {
   OP_REL_LT,
   OP_REL_LTE,
   OP_LOG_AND,
-  OP_LOR_OR,
+  OP_LOG_OR,
   OP_LOG_NOT,
   OP_ASS_VAL,
   OP_ASS_ADD,
@@ -62,6 +62,19 @@ export const TokenTypeUtil = {
     t !== null && [TokenType.SP_WHITE, TokenType.SP_COMMENT_LN].includes(t),
   isType: (t: TokenType | null): boolean =>
     t !== null && [TokenType.ID_TYPE].includes(t),
+  isAssOperator: (t: TokenType | null): boolean =>
+    t !== null && [TokenType.OP_ASS_VAL, TokenType.OP_ASS_ADD, TokenType.OP_ASS_SUB,
+      TokenType.OP_ASS_MUL, TokenType.OP_ASS_DIV].includes(t),
+  isBinArithmetic: (t: TokenType | null): boolean =>
+    t !== null && [TokenType.OP_PLUS, TokenType.OP_MINUS, TokenType.OP_MULTI, TokenType.OP_DIVIDE].includes(t),
+  isBinRelational: (t: TokenType | null): boolean =>
+    t !== null && [TokenType.OP_REL_EQ, TokenType.OP_REL_NE, TokenType.OP_REL_GT,
+      TokenType.OP_REL_GTE, TokenType.OP_REL_LT, TokenType.OP_REL_LTE].includes(t),
+  isBinLogical: (t: TokenType | null): boolean =>
+    t !== null && [TokenType.OP_LOG_OR, TokenType.OP_LOG_AND].includes(t),
+  isBinOperator: (t: TokenType | null): boolean =>
+    TokenTypeUtil.isAssOperator(t) || TokenTypeUtil.isBinArithmetic(t)
+      || TokenTypeUtil.isBinLogical(t) || TokenTypeUtil.isBinRelational(t),
 };
 
 export enum PrimitiveType {
@@ -80,7 +93,7 @@ const OperatorMap: {[op: string]: TokenType} = {
   '<': TokenType.OP_REL_LT,
   '<=': TokenType.OP_REL_LTE,
   '&&': TokenType.OP_LOG_AND,
-  '||': TokenType.OP_LOR_OR,
+  '||': TokenType.OP_LOG_OR,
   '!': TokenType.OP_LOG_NOT,
   ':=': TokenType.OP_ASS_VAL,
   '+=': TokenType.OP_ASS_ADD,
@@ -125,7 +138,7 @@ export class Token {
       case 'char': return newToken(TokenType.ID_TYPE, PrimitiveType.CHAR);
       case 'bool': return newToken(TokenType.ID_TYPE, PrimitiveType.BOOL);
     }
-    return newToken(TokenType.ID_NAME);
+    return newToken(TokenType.ID_NAME, literal);
   }
 
   public type: TokenType;
