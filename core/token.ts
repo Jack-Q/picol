@@ -47,6 +47,7 @@ export enum TokenType {
   DIM_R_CURLY, // }
   DIM_SEMICOLON, // ;
   DIM_COMMA, // ,
+  DIM_COLON, // :
 
   VAL_BOOL, // true, false
   VAL_CHAR,

@@ -76,11 +76,29 @@ const matchers:
     }
     return null;
   },
+  // Match operator
+  (ch, adv, peek, getPos) => {
+    const operatorSymbols = '+-*/<>=:&|~!';
+    const initPos = { ...getPos() };
+    if (operatorSymbols.indexOf(ch) >= 0) {
+      if (operatorSymbols.indexOf(peek()) >= 0) {
+        const op = Token.createOperatorToken(ch + peek(), initPos);
+        if (op) {
+          adv(1);
+          return op;
+        }
+      }
+      const op = Token.createOperatorToken(ch, initPos);
+      if (op) { return op; }
+    }
+    return null;
+  },
   // Match delimiter
   (ch, adv, peek, getPos) => {
     switch (ch) {
       case ';': return new Token(TokenType.DIM_SEMICOLON, ';', getPos());
       case ',': return new Token(TokenType.DIM_COMMA, ',', getPos());
+      case ':': return new Token(TokenType.DIM_COLON, ':', getPos());
       case '(': return new Token(TokenType.DIM_L_PAREN, '(', getPos());
       case ')': return new Token(TokenType.DIM_R_PAREN, ')', getPos());
       case '{': return new Token(TokenType.DIM_L_CURLY, '{', getPos());
@@ -155,23 +173,6 @@ const matchers:
         return new Token(TokenType.INV_VALUE, lit, initPos, invalid);
       }
       return new Token(TokenType.VAL_CHAR, lit, initPos, val);
-    }
-    return null;
-  },
-  // Match operator
-  (ch, adv, peek, getPos) => {
-    const operatorSymbols = '+-*/<>=:&|~!';
-    const initPos = { ...getPos() };
-    if (operatorSymbols.indexOf(ch) >= 0) {
-      if (operatorSymbols.indexOf(peek()) >= 0) {
-        const op = Token.createOperatorToken(ch + peek(), initPos);
-        if (op) {
-          adv(1);
-          return op;
-        }
-      }
-      const op = Token.createOperatorToken(ch, initPos);
-      if (op) { return op; }
     }
     return null;
   },

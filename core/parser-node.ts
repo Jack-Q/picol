@@ -113,9 +113,21 @@ export enum ParseNodeType {
 
   STAT_DECLARATION_PRIM,
   STAT_DECLARATION_ARR,
+  STAT_SEQUENCE,
+  STAT_RETURN,
+  STAT_BREAK,
+  STAT_CONTINUE,
+  STAT_IF,
+  STAT_IF_ELSE,
+  STAT_WHILE,
+  STAT_DO,
+  STAT_SWITCH,
 
   SEG_DECLARATION_LIST,
   SEG_DECLARATION_ITEM,
+  SEG_SWITCH_BODY,
+  SEG_CASE_LABEL,
+  SEG_DEFAULT_LABEL,
 
   TYPE_ARRAY,
   TYPE_PRIMITIVE,
@@ -196,8 +208,6 @@ export class ParseNode {
     return node;
   }
   public static createExprBinary(op: ParseOperatorType, exprLeft: ParseNode, exprRight: ParseNode) {
-    console.log('CREATE: ' + ParseOperatorType[op]);
-
     const node = new ParseNode(ParseNodeType.EXPR_BIN, op);
     node.addChild(exprLeft);
     node.addChild(exprRight);

@@ -70,6 +70,38 @@ i++;
 123 + 123 * 123;
 b := a + b;
 x := y + z || a + (b / 2) * 3 && d + e + f-- - g++;
+{
+  (a > 12) && c;
+  {
+    a = 12;
+  }
+  return 1123;
+  break;
+  continue;
+}
+if(a > b && c > d)
+  if (c > d)
+    int e;
+  else
+    int f;
+while(true){
+  i++;
+  if(i > 1200){
+    break;
+  }
+}
+{}
+do i++; while(i < 1000);
+switch(i * i + 123){
+  case 1: case 2:
+    i++; j--;
+    break;
+  case 3: case 4 * 12:
+    i = 123;
+    break;
+  default:
+    break;
+}
 `;
 
 const simpleLexer = Main.lexer(simpleTestCode);

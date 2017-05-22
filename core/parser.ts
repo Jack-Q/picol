@@ -131,32 +131,26 @@ const parseExpressionWeight =
     const op = getBinaryParseOperator(t.type);
     const w = getOperatorPriority(op);
     if (w < weight) {
-      console.log('pop weight');
       return ParseNode.createExprBinary(currentOp, leftExpr, expr);
     }
     src.adv();
     if (w < currentWeight) {
-      console.log('push left');
       leftExpr = ParseNode.createExprBinary(currentOp, leftExpr, expr);
       currentOp = op;
       currentWeight = w + getOperatorAssociativity(op);
     } else {
-      console.log('push right');
       const updateExpr = parseExpressionWeight(src, currentWeight, expr, op);
       leftExpr = ParseNode.createExprBinary(currentOp, leftExpr, updateExpr);
       t = src.get();
       if (t === null || !TokenTypeUtil.isBinOperator(t.type)) {
-        console.log('pop end');
         return leftExpr;
       }
       currentOp = getBinaryParseOperator(t.type);
       currentWeight = getOperatorPriority(currentOp);
       if (currentWeight < weight) {
-        console.log('pop weight');
         return leftExpr;
       }
       src.adv();
-      console.log('pop right');
       currentWeight += getOperatorAssociativity(currentOp);
     }
   }
@@ -212,28 +206,247 @@ const parseType: ParseFunc = (src) => {
 };
 
 const parseStatementSequence: ParseFunc = (src) => {
-  return null;
+  const lCurly = src.get();
+  if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
+    return null;
+  }
+  // skip left curly
+  src.adv();
+  const node = new ParseNode(ParseNodeType.STAT_SEQUENCE);
+  while (true) {
+    const rCurly = src.get();
+    if (rCurly === null) {
+      throw ParserError.expect('}', rCurly);
+    }
+    // get paring right curly, close block
+    if (rCurly.type === TokenType.DIM_R_CURLY) {
+      src.adv();
+      return node;
+    }
+    const child = parseStatement(src);
+    if (child) {
+      node.children.push(child);
+    } else {
+      throw ParserError.error('cannot parse token', src.get());
+    }
+  }
 };
 const parseStatementReturn: ParseFunc = (src) => {
-  return null;
+  const ret = src.get();
+  if (ret === null || ret.type !== TokenType.KW_RETURN) {
+    return null;
+  }
+  src.adv();
+  const expr = parseExpression(src);
+  const semicolon = src.get();
+  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
+    throw ParserError.expect(';', semicolon);
+  }
+  src.adv();
+  const node = new ParseNode(ParseNodeType.STAT_RETURN);
+  node.addChild(expr);
+  return node;
 };
 const parseStatementIf: ParseFunc = (src) => {
-  return null;
+  const ifBegin = src.get();
+  if (ifBegin === null || ifBegin.type !== TokenType.KW_IF) {
+    return null;
+  }
+  const lParen = src.adv();
+  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+    throw ParserError.expect('(', lParen);
+  }
+  src.adv();
+  const condition = parseExpression(src);
+  const rParen = src.get();
+  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
+    throw ParserError.expect(')', rParen);
+  }
+  src.adv();
+  const blockIfTrue = parseStatement(src);
+  const elseBegin = src.get();
+  if (elseBegin === null || elseBegin.type !== TokenType.KW_ELSE) {
+    // no else clause for this if statement
+    const node = new ParseNode(ParseNodeType.STAT_IF);
+    node.addChild(condition);
+    node.addChild(blockIfTrue);
+    return node;
+  }
+  // skip "else"
+  src.adv();
+  const blockIfFalse = parseStatement(src);
+  const node = new ParseNode(ParseNodeType.STAT_IF_ELSE);
+  node.addChild(condition);
+  node.addChild(blockIfTrue);
+  node.addChild(blockIfFalse);
+  return node;
 };
 const parseStatementBreak: ParseFunc = (src) => {
-  return null;
+  const br = src.get();
+  if (br === null || br.type !== TokenType.KW_BREAK) {
+    return null;
+  }
+  const semicolon = src.adv();
+  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
+    throw ParserError.expect(';', semicolon);
+  }
+  src.adv();
+  return new ParseNode(ParseNodeType.STAT_BREAK);
 };
 const parseStatementContinue: ParseFunc = (src) => {
-  return null;
+  const cnt = src.get();
+  if (cnt === null || cnt.type !== TokenType.KW_CONTINUE) {
+    return null;
+  }
+  const semicolon = src.adv();
+  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
+    throw ParserError.expect(';', semicolon);
+  }
+  src.adv();
+  return new ParseNode(ParseNodeType.STAT_CONTINUE);
+};
+const parseSwitchBody: ParseFunc = (src) => {
+  const lCurly = src.get();
+  if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
+    throw ParserError.expect('{', lCurly);
+  }
+  // skip left curly
+  src.adv();
+  const node = new ParseNode(ParseNodeType.SEG_SWITCH_BODY);
+  while (true) {
+    const next = src.get();
+    if (next === null) {
+      throw ParserError.expect('}', next);
+    }
+    // get paring right curly, close block
+    if (next.type === TokenType.DIM_R_CURLY) {
+      src.adv();
+      return node;
+    }
+
+    // case label
+    if (next.type === TokenType.KW_CASE) {
+      src.adv();
+      const expr = parseExpression(src);
+      if (expr === null) {
+        throw ParserError.expect('expr', src.get());
+      }
+      const colon = src.get();
+      if (colon === null || colon.type !== TokenType.DIM_COLON) {
+        throw ParserError.expect(':', colon);
+      }
+      // skip the colon
+      src.adv();
+      const caseNode = new ParseNode(ParseNodeType.SEG_CASE_LABEL);
+      caseNode.addChild(expr);
+      node.addChild(caseNode);
+      continue;
+    }
+
+    // default label
+    if (next.type === TokenType.KW_DEFAULT) {
+      src.adv();
+      const colon = src.get();
+      if (colon === null || colon.type !== TokenType.DIM_COLON) {
+        throw ParserError.expect(':', colon);
+      }
+      // skip the colon
+      src.adv();
+      node.addChild(new ParseNode(ParseNodeType.SEG_DEFAULT_LABEL));
+      continue;
+    }
+
+    // General statement
+    const child = parseStatement(src);
+    if (child) {
+      node.children.push(child);
+    } else {
+      throw ParserError.error('cannot parse token', src.get());
+    }
+  }
+
 };
 const parseStatementSwitch: ParseFunc = (src) => {
-  return null;
+  const switchBegin = src.get();
+  if (switchBegin === null || switchBegin.type !== TokenType.KW_SWITCH) {
+    return null;
+  }
+  const lParen = src.adv();
+  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+    throw ParserError.expect('(', lParen);
+  }
+  src.adv();
+  const criteria = parseExpression(src);
+  const rParen = src.get();
+  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
+    throw ParserError.expect(')', rParen);
+  }
+  src.adv();
+  const switchBody = parseSwitchBody(src);
+  const node = new ParseNode(ParseNodeType.STAT_SWITCH);
+  node.addChild(criteria);
+  node.addChild(switchBody);
+  return node;
 };
 const parseStatementDo: ParseFunc = (src) => {
-  return null;
+  const doBegin = src.get();
+  if (doBegin === null || doBegin.type !== TokenType.KW_DO) {
+    return null;
+  }
+  src.adv();
+  const loopBlock = parseStatement(src);
+  if (loopBlock === null) {
+    throw ParserError.error('the loop block is required', src.get());
+  }
+  const whileBegin = src.get();
+  if (whileBegin === null || whileBegin.type !== TokenType.KW_WHILE) {
+    throw ParserError.expect('while', whileBegin);
+  }
+
+  const lParen = src.adv();
+  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+    throw ParserError.expect('(', lParen);
+  }
+  src.adv();
+
+  const condition = parseExpression(src);
+
+  const rParen = src.get();
+  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
+    throw ParserError.expect(')', rParen);
+  }
+  const semicolon = src.adv();
+
+  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
+    throw ParserError.expect(';', semicolon);
+  }
+  src.adv();
+  const node = new ParseNode(ParseNodeType.STAT_DO);
+  node.addChild(loopBlock);
+  node.addChild(condition);
+  return node;
 };
 const parseStatementWhile: ParseFunc = (src) => {
-  return null;
+  const whileBegin = src.get();
+  if (whileBegin === null || whileBegin.type !== TokenType.KW_WHILE) {
+    return null;
+  }
+  const lParen = src.adv();
+  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+    throw ParserError.expect('(', lParen);
+  }
+  src.adv();
+  const condition = parseExpression(src);
+  const rParen = src.get();
+  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
+    throw ParserError.expect(')', rParen);
+  }
+  src.adv();
+  const loopBlock = parseStatement(src);
+  const node = new ParseNode(ParseNodeType.STAT_WHILE);
+  node.addChild(condition);
+  node.addChild(loopBlock);
+  return node;
 };
 const parseFunction: ParseFunc = (src, type, id) => {
   return null;
@@ -359,7 +572,7 @@ const parseStatement: ParseFunc = (src) => {
   if (!t) { return null; }
   let node = null;
   switch (t.type) {
-    case TokenType.DIM_L_BRACKET:
+    case TokenType.DIM_L_CURLY:
       node = parseStatementSequence(src);
       break;
     case TokenType.KW_RETURN:
@@ -406,9 +619,9 @@ export const parser = (tokensWithWhiteSpace: Token[]): ParseNode | null => {
   let tokenIndex = 0;
   const tokens = tokensWithWhiteSpace.filter((tk) => !TokenTypeUtil.isWhiteSpace(tk.type));
   const tokenSource: ITokenSource = {
-    get: () => tokens[tokenIndex],
-    peek: (i: number = 1) => { console.log('P' + tokenIndex); return tokens[tokenIndex + i]; },
-    adv: (i: number = 1) => { console.log('A' + tokenIndex); return tokens[tokenIndex += i]; },
+    get: () => tokens[tokenIndex] || null,
+    peek: (i: number = 1) => tokens[tokenIndex + i],
+    adv: (i: number = 1) => tokens[tokenIndex += i],
   };
 
   // The root/initial is a source file
