@@ -42,16 +42,34 @@ int main(){
 
 const lexer = Main.lexer(testCode);
 
-for (const token of lexer) {
-  // Colorize the error output
-  if (token.type === TokenType.INV_NO_MATCH || token.type === TokenType.INV_VALUE) {
-    console.error(
-      '\x1b[1;35m' + TokenType[token.type], '\t',
-      JSON.stringify(token.literal), '\t',
-      token.value || '',
-      '\x1b[0m',
-    );
-  } else {
-    console.log(TokenType[token.type], '\t', JSON.stringify(token.literal), '\t', token.value || '');
+const printToken = (tokenIterator: Iterable<Token>): void => {
+  for (const token of tokenIterator) {
+    // Colorize the error output
+    if (token.type === TokenType.INV_NO_MATCH || token.type === TokenType.INV_VALUE) {
+      console.error(
+        '\x1b[1;35m' + TokenType[token.type], '\t',
+        JSON.stringify(token.literal), '\t',
+        token.value || '',
+        '\x1b[0m',
+      );
+    } else {
+      console.log(TokenType[token.type], '\t', JSON.stringify(token.literal), '\t', token.value || '');
+    }
   }
+};
+
+const simpleTestCode = `
+int a := -20, b, c;
+int b := 1000;
+// b := a + b;
+`;
+
+const simpleLexer = Main.lexer(simpleTestCode);
+const tokenList = Array.from(simpleLexer);
+printToken(tokenList);
+const ast = Main.parser(tokenList);
+if (ast) {
+  ast.print();
+} else {
+  console.log('failed to construct AST');
 }

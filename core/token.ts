@@ -57,6 +57,13 @@ export enum TokenType {
   INV_NO_MATCH, // invalid token
 }
 
+export const TokenTypeUtil = {
+  isWhiteSpace: (t: TokenType | null): boolean =>
+    t !== null && [TokenType.SP_WHITE, TokenType.SP_COMMENT_LN].includes(t),
+  isType: (t: TokenType | null): boolean =>
+    t !== null && [TokenType.ID_TYPE].includes(t),
+};
+
 export enum PrimitiveType {
   INT, FLOAT, CHAR, BOOL,
 }
@@ -132,4 +139,7 @@ export class Token {
     this.position = { ...position };
     this.value = value;
   }
+
+  public getPositionString = (): string => `ln: ${this.position.line}, col: ${this.position.col}`;
+
 }
