@@ -30,7 +30,7 @@ const util = {
   peekIf: (peek: Peek, predicate: CharPredicate, limit: number = Infinity, stopLineEnd: boolean = true): string => {
     for (let i = 0, str = ''; ; i++) {
       const ch = peek(i);
-      if (!predicate(ch) || (stopLineEnd && util.isNewLine(ch))) {
+      if (!predicate(ch) || (stopLineEnd && util.isNewLine(ch)) || ch === undefined) {
         return str;
       }
       if (i >= limit) {
