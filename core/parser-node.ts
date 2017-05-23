@@ -131,12 +131,16 @@ export enum ParseNodeType {
   SEG_DEFAULT_LABEL,
   SEG_FUNCTION_PARAM_ITEM,
   SEG_FUNCTION_PARAM_LIST,
+  SEG_INVOKE_ARG_LIST,
+  SEG_ARRAY_DIM,
 
   TYPE_ARRAY,
   TYPE_PRIMITIVE,
 
   EXPR_UNI,
   EXPR_BIN,
+  EXPR_ARR_ACCESS,
+  EXPR_FUNC_INVOKE,
 
   VAL_CONSTANT_INT,
   VAL_CONSTANT_FLOAT,
@@ -186,8 +190,14 @@ export class ParseNode {
   }
 
   public static createArrayType(elementType: ParseNode, dimension: ParseNode) {
-    const node = new ParseNode(ParseNodeType.TYPE_PRIMITIVE);
+    const node = new ParseNode(ParseNodeType.TYPE_ARRAY);
     node.addChild(elementType);
+    node.addChild(dimension);
+    return node;
+  }
+  public static createArrayAccess(id: ParseNode, dimension: ParseNode) {
+    const node = new ParseNode(ParseNodeType.EXPR_ARR_ACCESS);
+    node.addChild(id);
     node.addChild(dimension);
     return node;
   }

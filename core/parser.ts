@@ -26,11 +26,54 @@ interface ITokenSource {
 type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode | null;
 
 const parseExpressionArray: ParseFunc = (src, id) => {
-  return null;
+  const t = src.get();
+  if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
+    return id || null;
+  }
+  const dim = parseArrayDimension(src);
+  if (dim === null) {
+    throw ParserError.expect('Array dimension', t);
+  }
+  const arrAccess = ParseNode.createArrayAccess(id, dim);
+
+  // use recursion here for array of array ...
+  return parseArrayType(src, arrAccess);
 };
+
 const parseExpressionInvoke: ParseFunc = (src, id) => {
-  return null;
+  // id is processed, current cursor position ought to be placed at (
+  const lParen = src.get();
+  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+    throw ParserError.expect('(', lParen);
+  }
+  src.adv();
+  const node = new ParseNode(ParseNodeType.SEG_INVOKE_ARG_LIST);
+  while (true) {
+    const exp = parseExpression(src);
+    if (exp === null) {
+      throw ParserError.expect('dim expr', src.get());
+    }
+    node.addChild(exp);
+
+    const comma = src.get();
+    if (comma === null) {
+      throw ParserError.expect(') ,', comma);
+    }
+    if (comma.type === TokenType.DIM_COMMA) {
+      src.adv();
+      continue;
+    }
+    if (comma.type === TokenType.DIM_R_PAREN) {
+      src.adv();
+      const invocation = new ParseNode(ParseNodeType.EXPR_FUNC_INVOKE);
+      invocation.addChild(id);
+      invocation.addChild(node);
+      return invocation;
+    }
+    throw ParserError.expect(') ,', comma);
+  }
 };
+
 const parseExpressionPostUnary: ParseFunc = (src, expr) => {
   const next = src.get();
   if (next !== null && next.type === TokenType.OP_INC_INC) {
@@ -45,6 +88,7 @@ const parseExpressionPostUnary: ParseFunc = (src, expr) => {
   }
   return expr;
 };
+
 const parseExpressionUnit: ParseFunc = (src) => {
   const handleUnary = (type: ParseOperatorType): ParseNode => {
     src.adv();
@@ -173,7 +217,33 @@ const parseExpression: ParseFunc = (src) => {
 };
 
 const parseArrayDimension: ParseFunc = (src) => {
-  return null;
+  const lBracket = src.get();
+  if (lBracket === null || lBracket.type !== TokenType.DIM_L_BRACKET) {
+    throw ParserError.expect('[', lBracket);
+  }
+  src.adv();
+  const node = new ParseNode(ParseNodeType.SEG_ARRAY_DIM);
+  while (true) {
+    const exp = parseExpression(src);
+    if (exp === null) {
+      throw ParserError.expect('dim expr', src.get());
+    }
+    node.addChild(exp);
+
+    const comma = src.get();
+    if (comma === null) {
+      throw ParserError.expect('] ,', comma);
+    }
+    if (comma.type === TokenType.DIM_COMMA) {
+      src.adv();
+      continue;
+    }
+    if (comma.type === TokenType.DIM_R_BRACKET) {
+      src.adv();
+      return node;
+    }
+    throw ParserError.expect('] ,', comma);
+  }
 };
 
 const parseArrayType: ParseFunc = (src, type) => {
@@ -231,6 +301,7 @@ const parseStatementSequence: ParseFunc = (src) => {
     }
   }
 };
+
 const parseStatementReturn: ParseFunc = (src) => {
   const ret = src.get();
   if (ret === null || ret.type !== TokenType.KW_RETURN) {
@@ -247,6 +318,7 @@ const parseStatementReturn: ParseFunc = (src) => {
   node.addChild(expr);
   return node;
 };
+
 const parseStatementIf: ParseFunc = (src) => {
   const ifBegin = src.get();
   if (ifBegin === null || ifBegin.type !== TokenType.KW_IF) {
@@ -281,6 +353,7 @@ const parseStatementIf: ParseFunc = (src) => {
   node.addChild(blockIfFalse);
   return node;
 };
+
 const parseStatementBreak: ParseFunc = (src) => {
   const br = src.get();
   if (br === null || br.type !== TokenType.KW_BREAK) {
@@ -293,6 +366,7 @@ const parseStatementBreak: ParseFunc = (src) => {
   src.adv();
   return new ParseNode(ParseNodeType.STAT_BREAK);
 };
+
 const parseStatementContinue: ParseFunc = (src) => {
   const cnt = src.get();
   if (cnt === null || cnt.type !== TokenType.KW_CONTINUE) {
@@ -305,6 +379,7 @@ const parseStatementContinue: ParseFunc = (src) => {
   src.adv();
   return new ParseNode(ParseNodeType.STAT_CONTINUE);
 };
+
 const parseSwitchBody: ParseFunc = (src) => {
   const lCurly = src.get();
   if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
@@ -366,6 +441,7 @@ const parseSwitchBody: ParseFunc = (src) => {
   }
 
 };
+
 const parseStatementSwitch: ParseFunc = (src) => {
   const switchBegin = src.get();
   if (switchBegin === null || switchBegin.type !== TokenType.KW_SWITCH) {
@@ -388,6 +464,7 @@ const parseStatementSwitch: ParseFunc = (src) => {
   node.addChild(switchBody);
   return node;
 };
+
 const parseStatementDo: ParseFunc = (src) => {
   const doBegin = src.get();
   if (doBegin === null || doBegin.type !== TokenType.KW_DO) {
@@ -426,6 +503,7 @@ const parseStatementDo: ParseFunc = (src) => {
   node.addChild(condition);
   return node;
 };
+
 const parseStatementWhile: ParseFunc = (src) => {
   const whileBegin = src.get();
   if (whileBegin === null || whileBegin.type !== TokenType.KW_WHILE) {

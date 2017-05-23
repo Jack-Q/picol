@@ -58,6 +58,15 @@ const printToken = (tokenIterator: Iterable<Token>): void => {
   }
 };
 
+const tokenList = Array.from(lexer);
+printToken(tokenList);
+const ast = Main.parser(tokenList);
+if (ast) {
+  ast.print();
+} else {
+  console.log('failed to construct AST');
+}
+
 const simpleTestCode = `
 int a := -20, b, c;
 int b := 1000;
@@ -105,14 +114,17 @@ switch(i * i + 123){
 int funcA(int val, int val2){
   return 123;
 }
+int[1+2,2,3] a;
+int[1+2,2,3][1+2,2,3][1+2,2,3] a;
+a[2,2,3][b[2,3,4],2,2] := show(1,2,2);
 `;
 
 const simpleLexer = Main.lexer(simpleTestCode);
-const tokenList = Array.from(simpleLexer);
-printToken(tokenList);
-const ast = Main.parser(tokenList);
-if (ast) {
-  ast.print();
+const simpleTokenList = Array.from(simpleLexer);
+printToken(simpleTokenList);
+const simpleAst = Main.parser(simpleTokenList);
+if (simpleAst) {
+  simpleAst.print();
 } else {
   console.log('failed to construct AST');
 }
