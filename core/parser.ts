@@ -448,8 +448,77 @@ const parseStatementWhile: ParseFunc = (src) => {
   node.addChild(loopBlock);
   return node;
 };
+
+const parseFunctionParam: ParseFunc = (src) => {
+  const node = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_LIST);
+
+  const emptyRParen = src.get();
+  if (emptyRParen === null || emptyRParen.type === TokenType.DIM_R_PAREN) {
+    // empty list (maybe incomplete)
+    return node;
+  }
+
+  while (true) {
+    // get type
+    const type = parseType(src);
+    if (type === null) {
+      throw ParserError.expect('type', src.get());
+    }
+
+    const id = src.get();
+    if (id === null || id.type !== TokenType.ID_NAME) {
+      throw ParserError.expect('id', src.get());
+    }
+    src.adv();
+
+    const item = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_ITEM);
+    item.addChild(type);
+    item.addChild(ParseNode.createIdentifier(id.value));
+    node.addChild(item);
+
+    const comma = src.get();
+    if (comma === null || comma.type === TokenType.DIM_R_PAREN) {
+      return node;
+    }
+
+    if (comma.type !== TokenType.DIM_COMMA) {
+      throw ParserError.expect(',', comma);
+    }
+    src.adv();
+  }
+};
+
 const parseFunction: ParseFunc = (src, type, id) => {
-  return null;
+  // this requires the type of return value and the identifier of function
+  // is provided, current checking point is at the left parenthesis
+  if (!type || !id) {
+    throw ParserError.error('function type and identifer are required', src.get());
+  }
+  const lParen = src.get();
+  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+    throw ParserError.expect('(', lParen);
+  }
+  src.adv();
+
+  const param = parseFunctionParam(src);
+
+  const rParen = src.get();
+  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
+    throw ParserError.expect(')', rParen);
+  }
+  src.adv();
+
+  const body = parseStatementSequence(src);
+
+  if (body === null) {
+    throw ParserError.expect('body', src.get());
+  }
+
+  const node = new ParseNode(ParseNodeType.STAT_FUNCTION);
+  node.addChild(param);
+  node.addChild(body);
+
+  return node;
 };
 
 const parseDeclareItem: ParseFunc = (src, id) => {
@@ -517,7 +586,12 @@ const parseStatementDeclaration: ParseFunc = (src) => {
   const id = ParseNode.createIdentifier(t.value);
 
   t = src.get();
-  if (t === null || ![TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {
+  if (t === null || ![
+    TokenType.OP_ASS_VAL,    // := --> int a := 10;
+    TokenType.DIM_COMMA,     // ,  --> int a, b;
+    TokenType.DIM_L_PAREN,   // (  --> int a (int b){}
+    TokenType.DIM_SEMICOLON, // ;  --> int a;
+  ].includes(t.type)) {
     throw ParserError.expect(['(', ':=', ';', ','].join(' '), t);
   }
   if (t.type === TokenType.DIM_L_PAREN) {

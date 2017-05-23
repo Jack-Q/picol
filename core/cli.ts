@@ -102,6 +102,9 @@ switch(i * i + 123){
   default:
     break;
 }
+int funcA(int val, int val2){
+  return 123;
+}
 `;
 
 const simpleLexer = Main.lexer(simpleTestCode);
