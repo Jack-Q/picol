@@ -259,12 +259,10 @@ const parseArrayType: ParseFunc = (src, type) => {
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
     return type || null;
   }
-  console.log('arr-type -> arr-dim');
   const dim = parseArrayDimension(src);
   if (dim === null) {
     throw ParserError.expect('Array dimension', t);
   }
-  console.log('!! arr type');
   const arrayType = ParseNode.createArrayType(type, dim);
 
   // use recursion here for array of array ...
@@ -275,7 +273,6 @@ const parseArrayType: ParseFunc = (src, type) => {
 const parseType: ParseFunc = (src) => {
   let t = src.get();
   if (t === null || !TokenTypeUtil.isType(t.type)) { return null; }
-  console.log('!! prim type');
   const primType = ParseNode.createPrimitiveType(t.value as PrimitiveType);
 
   t = src.adv();
@@ -648,11 +645,9 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
   while (true) {
     if (!id) {
       if (t === null || t.type !== TokenType.ID_NAME) { throw ParserError.expect('identifier', t); }
-      console.log('!! id');
       id = ParseNode.createIdentifier(t.value);
       t = src.adv();
     }
-    console.log('decl list -> decl item');
     const item = parseDeclareItem(src, id);
     if (item === null) {
       throw ParserError.error('cannot parse declaration item', src.get());
@@ -668,7 +663,6 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
     src.adv();
 
     if (t.type === TokenType.DIM_SEMICOLON) {
-      console.log('!! declare list');
       return ParseNode.createDeclarationList(declareList);
     }
 
@@ -680,7 +674,6 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
 const parseStatementDeclaration: ParseFunc = (src) => {
   let t = src.get();
   if (!t || !TokenTypeUtil.isType(t.type)) { return null; }
-  console.log('decl -> type');
   const type = parseType(src);
   if (type === null) { return null; }
 
@@ -689,7 +682,6 @@ const parseStatementDeclaration: ParseFunc = (src) => {
   if (t === null || t.type !== TokenType.ID_NAME) {
     throw ParserError.expect('identifier', t);
   }
-  console.log('!! identifier');
   src.adv(); // move after identifier
   const id = ParseNode.createIdentifier(t.value);
 
@@ -703,7 +695,6 @@ const parseStatementDeclaration: ParseFunc = (src) => {
     throw ParserError.expect(['(', ':=', ';', ','].join(' '), t);
   }
   if (t.type === TokenType.DIM_L_PAREN) {
-    console.log('decl -> func decl');
     return parseFunction(src, type, id);
   }
   if (type.type === ParseNodeType.TYPE_ARRAY) {
@@ -711,7 +702,6 @@ const parseStatementDeclaration: ParseFunc = (src) => {
     // in this case, only one identifier is allowed after it
     if (t.type === TokenType.DIM_SEMICOLON) {
       src.adv();
-      console.log('!! arr decl');
       return ParseNode.createDeclarationArray(type, id);
     } else if (t.type === TokenType.DIM_COMMA) {
       throw ParserError.error('array declaration can only specify on variable', t);
@@ -720,10 +710,8 @@ const parseStatementDeclaration: ParseFunc = (src) => {
     }
   } else if (type.type === ParseNodeType.TYPE_PRIMITIVE) {
     if ([TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {
-      console.log('decl -> decl list');
       const list = parseDeclareList(src, id);
       if (list !== null) {
-        console.log('!! prim decl');
         return ParseNode.createDeclarationPrimitive(type, list);
       }
     }
@@ -737,10 +725,8 @@ const parseStatementExprDecl: ParseFunc = (src) => {
   if (!t) { return null; }
 
   if (TokenTypeUtil.isType(t.type)) {
-    console.log('state -> decl');
     return parseStatementDeclaration(src);
   }
-  console.log('state -> expr');
   const expr = parseExpression(src);
   const end = src.get();
   if (end === null || end.type !== TokenType.DIM_SEMICOLON) {
@@ -800,7 +786,7 @@ const parseSource: ParseFunc = (src) => {
   return node;
 };
 
-export const parser = (tokensWithWhiteSpace: Token[]): ParseNode | null => {
+export const parser = (tokensWithWhiteSpace: Token[]): ParseNode => {
   let tokenIndex = 0;
   const tokens = tokensWithWhiteSpace.filter((tk) => !TokenTypeUtil.isWhiteSpace(tk.type));
   const tokenSource: ITokenSource = {
@@ -812,7 +798,7 @@ export const parser = (tokensWithWhiteSpace: Token[]): ParseNode | null => {
   // The root/initial is a source file
   const ast = parseSource(tokenSource);
   if (ast === null || tokenIndex !== tokens.length) {
-    return null;
+    throw ParserError.error('parsing failed', tokenSource.get());
   }
   return ast;
 };

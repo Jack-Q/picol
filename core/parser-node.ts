@@ -238,7 +238,9 @@ export class ParseNode {
   }
 
   public print = (indent: number = 2, depth: number = 0) => {
-    console.log(`${' '.repeat(indent * depth)}${ParseNodeType[this.type]}   ${this.getValueString()}`);
+    console.log(`${
+      ' '.repeat(indent * depth)}${ParseNodeType[this.type]
+      }   \x1b[1;35m${this.getValueString()}\x1b[0m`);
     this.children.map((c) => c.print(indent, depth + 1));
   }
 
@@ -248,6 +250,7 @@ export class ParseNode {
       case ParseNodeType.EXPR_BIN:
         return ParseOperatorType[this.value];
       case ParseNodeType.TYPE_PRIMITIVE: return PrimitiveType[this.value];
+      case ParseNodeType.VAL_UNINITIALIZED: return 'no initialization';
     }
     return this.value || '';
   }
