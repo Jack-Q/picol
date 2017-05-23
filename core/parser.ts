@@ -319,6 +319,12 @@ const parseStatementReturn: ParseFunc = (src) => {
     return null;
   }
   src.adv();
+  const voidExpr = src.get();
+  if (voidExpr !== null && voidExpr.type === TokenType.DIM_SEMICOLON) {
+    src.adv();
+    const node = new ParseNode(ParseNodeType.STAT_RETURN_VOID);
+    return node;
+  }
   const expr = parseExpression(src);
   const semicolon = src.get();
   if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {

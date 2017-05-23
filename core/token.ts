@@ -79,7 +79,7 @@ export const TokenTypeUtil = {
 };
 
 export enum PrimitiveType {
-  INT, FLOAT, CHAR, BOOL,
+  INT, FLOAT, CHAR, BOOL, VOID,
 }
 
 const OperatorMap: {[op: string]: TokenType} = {
@@ -138,6 +138,7 @@ export class Token {
       case 'float': return newToken(TokenType.ID_TYPE, PrimitiveType.FLOAT);
       case 'char': return newToken(TokenType.ID_TYPE, PrimitiveType.CHAR);
       case 'bool': return newToken(TokenType.ID_TYPE, PrimitiveType.BOOL);
+      case 'void': return newToken(TokenType.ID_TYPE, PrimitiveType.VOID);
     }
     return newToken(TokenType.ID_NAME, literal);
   }

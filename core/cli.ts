@@ -117,6 +117,9 @@ int funcA(int val, int val2){
 int[1+2,2,3] a;
 int[1+2,2,3][1+2,2,3][1+2,2,3] a;
 a[2,2,3][b[2,3,4],2,2] := show(1,2,2);
+void a(){
+  return;
+}
 `;
 
 const simpleLexer = Main.lexer(simpleTestCode);
