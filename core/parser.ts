@@ -25,6 +25,7 @@ interface ITokenSource {
 
 type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode | null;
 
+// arr[a,b,c][a,b,c]
 const parseExpressionArray: ParseFunc = (src, id) => {
   const t = src.get();
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
@@ -40,6 +41,7 @@ const parseExpressionArray: ParseFunc = (src, id) => {
   return parseArrayType(src, arrAccess);
 };
 
+// func(a,b,c)
 const parseExpressionInvoke: ParseFunc = (src, id) => {
   // id is processed, current cursor position ought to be placed at (
   const lParen = src.get();
@@ -74,6 +76,7 @@ const parseExpressionInvoke: ParseFunc = (src, id) => {
   }
 };
 
+// i++, i--
 const parseExpressionPostUnary: ParseFunc = (src, expr) => {
   const next = src.get();
   if (next !== null && next.type === TokenType.OP_INC_INC) {
@@ -89,6 +92,7 @@ const parseExpressionPostUnary: ParseFunc = (src, expr) => {
   return expr;
 };
 
+// +a, -a, !a, ++a, --a, a++, a--, + + a, arr[a], a(1), (expr)...
 const parseExpressionUnit: ParseFunc = (src) => {
   const handleUnary = (type: ParseOperatorType): ParseNode => {
     src.adv();
@@ -155,6 +159,7 @@ const parseExpressionUnit: ParseFunc = (src) => {
   return null;
 };
 
+// helper function for determine operator priority
 const parseExpressionWeight =
   (src: ITokenSource, weight: number, leftParam: ParseNode, initOp: ParseOperatorType): ParseNode => {
   let leftExpr = leftParam;
@@ -200,6 +205,7 @@ const parseExpressionWeight =
   }
 };
 
+// expression
 const parseExpression: ParseFunc = (src) => {
   const expr = parseExpressionUnit(src);
   if (expr === null) {
@@ -216,6 +222,7 @@ const parseExpression: ParseFunc = (src) => {
   return parseExpressionWeight(src, 0, expr, getBinaryParseOperator(t.type));
 };
 
+// [1,2,3]
 const parseArrayDimension: ParseFunc = (src) => {
   const lBracket = src.get();
   if (lBracket === null || lBracket.type !== TokenType.DIM_L_BRACKET) {
@@ -246,6 +253,7 @@ const parseArrayDimension: ParseFunc = (src) => {
   }
 };
 
+// int[1,2,3]
 const parseArrayType: ParseFunc = (src, type) => {
   const t = src.get();
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
@@ -263,6 +271,7 @@ const parseArrayType: ParseFunc = (src, type) => {
   return parseArrayType(src, arrayType);
 };
 
+// int a(int m, int n){}
 const parseType: ParseFunc = (src) => {
   let t = src.get();
   if (t === null || !TokenTypeUtil.isType(t.type)) { return null; }
@@ -275,6 +284,7 @@ const parseType: ParseFunc = (src) => {
   return arrayType;
 };
 
+// { stat1; stat2; }
 const parseStatementSequence: ParseFunc = (src) => {
   const lCurly = src.get();
   if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
@@ -302,6 +312,7 @@ const parseStatementSequence: ParseFunc = (src) => {
   }
 };
 
+// return expr;
 const parseStatementReturn: ParseFunc = (src) => {
   const ret = src.get();
   if (ret === null || ret.type !== TokenType.KW_RETURN) {
@@ -319,6 +330,7 @@ const parseStatementReturn: ParseFunc = (src) => {
   return node;
 };
 
+// if(condition) {}, if(condition) {} else {}
 const parseStatementIf: ParseFunc = (src) => {
   const ifBegin = src.get();
   if (ifBegin === null || ifBegin.type !== TokenType.KW_IF) {
@@ -354,6 +366,7 @@ const parseStatementIf: ParseFunc = (src) => {
   return node;
 };
 
+// break;
 const parseStatementBreak: ParseFunc = (src) => {
   const br = src.get();
   if (br === null || br.type !== TokenType.KW_BREAK) {
@@ -367,6 +380,7 @@ const parseStatementBreak: ParseFunc = (src) => {
   return new ParseNode(ParseNodeType.STAT_BREAK);
 };
 
+// continue;
 const parseStatementContinue: ParseFunc = (src) => {
   const cnt = src.get();
   if (cnt === null || cnt.type !== TokenType.KW_CONTINUE) {
@@ -380,6 +394,7 @@ const parseStatementContinue: ParseFunc = (src) => {
   return new ParseNode(ParseNodeType.STAT_CONTINUE);
 };
 
+// {case exp: stat; break; default: stat;}
 const parseSwitchBody: ParseFunc = (src) => {
   const lCurly = src.get();
   if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
@@ -442,6 +457,7 @@ const parseSwitchBody: ParseFunc = (src) => {
 
 };
 
+// switch(exp) switchBody
 const parseStatementSwitch: ParseFunc = (src) => {
   const switchBegin = src.get();
   if (switchBegin === null || switchBegin.type !== TokenType.KW_SWITCH) {
@@ -465,6 +481,7 @@ const parseStatementSwitch: ParseFunc = (src) => {
   return node;
 };
 
+// do {} while (exp);
 const parseStatementDo: ParseFunc = (src) => {
   const doBegin = src.get();
   if (doBegin === null || doBegin.type !== TokenType.KW_DO) {
@@ -504,6 +521,7 @@ const parseStatementDo: ParseFunc = (src) => {
   return node;
 };
 
+// while (expr) {}
 const parseStatementWhile: ParseFunc = (src) => {
   const whileBegin = src.get();
   if (whileBegin === null || whileBegin.type !== TokenType.KW_WHILE) {
@@ -527,6 +545,7 @@ const parseStatementWhile: ParseFunc = (src) => {
   return node;
 };
 
+// (int a, int b, int c)
 const parseFunctionParam: ParseFunc = (src) => {
   const node = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_LIST);
 
@@ -566,6 +585,7 @@ const parseFunctionParam: ParseFunc = (src) => {
   }
 };
 
+// int a (Params) {}
 const parseFunction: ParseFunc = (src, type, id) => {
   // this requires the type of return value and the identifier of function
   // is provided, current checking point is at the left parenthesis
@@ -599,6 +619,7 @@ const parseFunction: ParseFunc = (src, type, id) => {
   return node;
 };
 
+// a, a := 10
 const parseDeclareItem: ParseFunc = (src, id) => {
   const t = src.get();
   if (t === null) { return null; }
@@ -613,6 +634,7 @@ const parseDeclareItem: ParseFunc = (src, id) => {
   throw ParserError.expect(':= , ;', t);
 };
 
+// a, b:= 10, c := a
 const parseDeclareList: ParseFunc = (src, firstId) => {
   const declareList: ParseNode[] = [];
   let t = src.get();
@@ -647,6 +669,8 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
     t = src.get();
   }
 };
+
+// int declarationList; int[arr] a;
 const parseStatementDeclaration: ParseFunc = (src) => {
   let t = src.get();
   if (!t || !TokenTypeUtil.isType(t.type)) { return null; }
@@ -701,6 +725,7 @@ const parseStatementDeclaration: ParseFunc = (src) => {
   return null;
 };
 
+// expression or declaration
 const parseStatementExprDecl: ParseFunc = (src) => {
   const t = src.get();
   if (!t) { return null; }
@@ -719,6 +744,7 @@ const parseStatementExprDecl: ParseFunc = (src) => {
   return expr;
 };
 
+// statement
 const parseStatement: ParseFunc = (src) => {
   const t = src.get();
   if (!t) { return null; }
@@ -754,6 +780,7 @@ const parseStatement: ParseFunc = (src) => {
   return node;
 };
 
+// source file abstraction
 const parseSource: ParseFunc = (src) => {
   const node = new ParseNode(ParseNodeType.SRC_SOURCE);
   while (src.get()) {
