@@ -1,5 +1,13 @@
 export enum QuadrupleOperator {
-
+  J_JMP,
+  J_EQ,
+  J_NE,
+  J_GE,
+  J_GEQ,
+  J_LE,
+  J_LEQ
+  J_EZ,
+  J_NEZ,
 }
 
 export enum QuadrupleArgumentType {
