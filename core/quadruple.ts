@@ -34,102 +34,101 @@ export enum QuadrupleOperator {
   F_FUNC,
 }
 
-export enum QuadrupleArgumentType {
+export enum QuadrupleArgType {
   TABLE_REF,  // variable reference
-  VAR_TEMP,   // temporary variable 
+  VAR_TEMP,   // temporary variable
   QUAD_REF,   // quadruple table reference
   ARRAY_ADDR, // array reference
   VALUE_INST, // instance value
-  NULL, // no item 
+  NULL, // no item
 }
 
-export class QuadrupleArgument {
-  public type: QuadrupleArgumentType;
-  protected constructor(type: QuadrupleArgumentType) {
+export class QuadrupleArg {
+  public type: QuadrupleArgType;
+  protected constructor(type: QuadrupleArgType) {
     this.type = type;
   }
-  public toString: () => string = () => QuadrupleArgumentType[this.type]
-  public get name ():string {return this.toString();}
+  public toString: () => string = () => QuadrupleArgType[this.type];
+  public get name (): string {return this.toString(); }
 }
 
-export class QuadrupleArgumentValue extends QuadrupleArgument{
-  valueType: PrimitiveType;
-  value: any;
+export class QuadrupleArgValue extends QuadrupleArg {
+  public valueType: PrimitiveType;
+  public value: any;
 
   constructor(type: PrimitiveType, value: any) {
-    super(QuadrupleArgumentType.VALUE_INST);
+    super(QuadrupleArgType.VALUE_INST);
     this.value = value;
     this.valueType = type;
   }
 
-  toString = () => `${PrimitiveType[this.valueType]}(${this.value})`
-  get name() { return String(this.value);}
+  public toString = () => `${PrimitiveType[this.valueType]}(${this.value})`;
+  get name() { return String(this.value); }
 }
 
-export class QuadrupleArgumentArrayAddr extends QuadrupleArgument{
-  base: QuadrupleArgument;
-  offset: QuadrupleArgument;
+export class QuadrupleArgArrayAddr extends QuadrupleArg {
+  public base: QuadrupleArg;
+  public offset: QuadrupleArg;
 
-  constructor(base: QuadrupleArgument, offset: QuadrupleArgument) {
-    super(QuadrupleArgumentType.ARRAY_ADDR);
+  constructor(base: QuadrupleArg, offset: QuadrupleArg) {
+    super(QuadrupleArgType.ARRAY_ADDR);
     this.base = base;
     this.offset = offset;
   }
 
-  toString = () => `${this.base.name}[${this.offset.name}]`
+  public toString = () => `${this.base.name}[${this.offset.name}]`;
 }
 
-export class QuadrupleArgumentTableRef extends QuadrupleArgument{
-  varName: string;
-  index: number;
+export class QuadrupleArgTableRef extends QuadrupleArg {
+  public varName: string;
+  public index: number;
 
   constructor(name: string, index: number) {
-    super(QuadrupleArgumentType.TABLE_REF);
+    super(QuadrupleArgType.TABLE_REF);
     this.varName = name;
     this.index = index;
   }
 
-  toString = () => `${[this.varName]}@${this.index}`
-  get name() { return String(this.varName);}
+  public toString = () => `${[this.varName]}@${this.index}`;
+  get name() { return String(this.varName); }
 }
 
-export class QuadrupleArgumentQuadRef extends QuadrupleArgument{
-  quadIndex: number;
+export class QuadrupleArgQuadRef extends QuadrupleArg {
+  public quadIndex: number;
 
   constructor(quadIndex: number) {
-    super(QuadrupleArgumentType.QUAD_REF);
+    super(QuadrupleArgType.QUAD_REF);
     this.quadIndex = quadIndex;
   }
 
-  toString = () => `(${this.quadIndex})`
+  public toString = () => `(${this.quadIndex})`;
 }
 
-export class QuadrupleArgumentVarTemp extends QuadrupleArgument {
-  tempIndex: number;
+export class QuadrupleArgVarTemp extends QuadrupleArg {
+  public tempIndex: number;
   constructor(tempIndex: number) {
-    super(QuadrupleArgumentType.VAR_TEMP);
+    super(QuadrupleArgType.VAR_TEMP);
     this.tempIndex = tempIndex;
   }
-  toString = () => `T_${this.tempIndex}`;
+  public toString = () => `T_${this.tempIndex}`;
 }
 
-export class QuadrupleArgumentNull extends QuadrupleArgument{
+export class QuadrupleArgNull extends QuadrupleArg {
 
   constructor() {
-    super(QuadrupleArgumentType.NULL);
+    super(QuadrupleArgType.NULL);
   }
 
-  toString = () => `_`
+  public toString = () => `_`;
 }
 
-// tslint:disable-next-line:max-classes-per-file
 export class Quadruple {
   public operator: QuadrupleOperator;
-  public argument1: QuadrupleArgument;
-  public argument2: QuadrupleArgument;
-  public result: QuadrupleArgument;
+  public argument1: QuadrupleArg;
+  public argument2: QuadrupleArg;
+  public result: QuadrupleArg;
   public comment: string = '';
-  toString() {
+  public toString() {
     const pan = (str: string) => str + ' '.repeat(12).slice(str.length);
     return `${
       pan(QuadrupleOperator[this.operator])
@@ -139,6 +138,6 @@ export class Quadruple {
       pan(this.argument2.toString())
       }\t ${
       pan(this.result.toString())
-      }` + (this.comment ? `\t # `+ this.comment:'');
+      }` + (this.comment ? `\t # ` + this.comment : '');
   }
 }

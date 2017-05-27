@@ -1,5 +1,8 @@
 import { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
-import { Quadruple, QuadrupleArgumentQuadRef, QuadrupleArgument, QuadrupleArgumentValue, QuadrupleOperator, QuadrupleArgumentTableRef, QuadrupleArgumentNull, QuadrupleArgumentVarTemp } from './quadruple';
+import {
+  Quadruple, QuadrupleArg, QuadrupleArgNull, QuadrupleArgQuadRef, QuadrupleArgTableRef,
+  QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
+} from './quadruple';
 import { PrimitiveType } from './token';
 
 class GeneratorError extends Error {
@@ -12,7 +15,7 @@ class GeneratorError extends Error {
 
 class ExecutionContext {
   public parent: ExecutionContext;
-  private nameTable: { [name: string]: { name: string } } = {}
+  private nameTable: { [name: string]: { name: string } } = {};
   public get isRoot(): boolean {
     return this.parent === undefined;
   }
@@ -20,13 +23,13 @@ class ExecutionContext {
   constructor(parent: ExecutionContext) {
     this.parent = parent;
   }
-  
-  public addEntry (name: string){
+
+  public addEntry(name: string) {
     this.nameTable[name] = { name };
   }
 
   public getEntry(name: string, recursive: boolean = true): string {
-    if (this.nameTable[name]){
+    if (this.nameTable[name]) {
       return this.nameTable[name].name;
     }
     return this.isRoot ? '' : this.parent.getEntry(name);
@@ -56,16 +59,17 @@ export class GeneratorContext {
     return this.currentContext;
   }
 
-  public addEntry(name: string): QuadrupleArgumentTableRef {
+  public addEntry(name: string): QuadrupleArgTableRef {
     this.currentContext.addEntry(name);
-    return new QuadrupleArgumentTableRef(name, 0);
+    return new QuadrupleArgTableRef(name, 0);
   }
 
-  public getEntry(name: string): QuadrupleArgumentTableRef {
-    return new QuadrupleArgumentTableRef(this.currentContext.getEntry(name), 0);
+  public getEntry(name: string): QuadrupleArgTableRef {
+    return new QuadrupleArgTableRef(this.currentContext.getEntry(name), 0);
   }
 
-  public addQuadruple(op: QuadrupleOperator, arg1: QuadrupleArgument, arg2: QuadrupleArgument, result: QuadrupleArgument, comment: string = '') {
+  public addQuadruple(op: QuadrupleOperator, arg1: QuadrupleArg, arg2: QuadrupleArg, result: QuadrupleArg,
+                      comment: string = '') {
     const quadruple = new Quadruple();
     quadruple.operator = op;
     quadruple.argument1 = arg1;
@@ -76,7 +80,7 @@ export class GeneratorContext {
   }
 
   public getTempVar() {
-    return new QuadrupleArgumentVarTemp(this.tempIndex++);
+    return new QuadrupleArgVarTemp(this.tempIndex++);
   }
 }
 
@@ -85,17 +89,17 @@ interface IGeneratorAttribute {
 }
 
 class GeneratorAttributeStatement implements IGeneratorAttribute {
-  isValid = true;
-  chain: QuadrupleArgumentQuadRef;
-  constructor(chain: QuadrupleArgumentQuadRef) {
+  public isValid = true;
+  public chain: QuadrupleArgQuadRef;
+  constructor(chain: QuadrupleArgQuadRef) {
     this.chain = chain;
   }
 }
 
 class GeneratorAttributeExpression implements IGeneratorAttribute {
-  isValid = true;
-  value: QuadrupleArgument;
-  constructor(value: QuadrupleArgument) {
+  public isValid = true;
+  public value: QuadrupleArg;
+  constructor(value: QuadrupleArg) {
     this.value = value;
   }
 }
@@ -107,30 +111,30 @@ const attr = {
 type generateRule<T extends IGeneratorAttribute> = (ctx: GeneratorContext, node: ParseNode) => T;
 
 const generateExpression: generateRule<GeneratorAttributeExpression> = (ctx, node) => {
-  let returnVal: QuadrupleArgument;
-  let t: QuadrupleArgument | null = null; 
-  const tempVar = (() => { return t = t || ctx.getTempVar()});
+  let returnVal: QuadrupleArg;
+  let t: QuadrupleArg | null = null;
+  const tempVar = () => t = t || ctx.getTempVar();
   switch (node.type) {
     case ParseNodeType.VAL_CONSTANT_INT:
-      returnVal = new QuadrupleArgumentValue(PrimitiveType.INT, node.value);
+      returnVal = new QuadrupleArgValue(PrimitiveType.INT, node.value);
       break;
     case ParseNodeType.VAL_CONSTANT_BOOL:
-      returnVal = new QuadrupleArgumentValue(PrimitiveType.BOOL, node.value);
+      returnVal = new QuadrupleArgValue(PrimitiveType.BOOL, node.value);
       break;
     case ParseNodeType.VAL_CONSTANT_CHAR:
-      returnVal = new QuadrupleArgumentValue(PrimitiveType.CHAR, node.value);
-      break;  
+      returnVal = new QuadrupleArgValue(PrimitiveType.CHAR, node.value);
+      break;
     case ParseNodeType.VAL_CONSTANT_FLOAT:
-      returnVal = new QuadrupleArgumentValue(PrimitiveType.FLOAT, node.value);
-      break;  
+      returnVal = new QuadrupleArgValue(PrimitiveType.FLOAT, node.value);
+      break;
     case ParseNodeType.VAL_IDENTIFIER:
       returnVal = ctx.getEntry(node.value);
-      break;  
+      break;
     case ParseNodeType.EXPR_BIN: {
-      
+
       const op: ParseOperatorType = node.value;
-      const lOperand: QuadrupleArgument = generateExpression(ctx, node.children[0]).value;
-      const rOperand: QuadrupleArgument = generateExpression(ctx, node.children[1]).value;
+      const lOperand: QuadrupleArg = generateExpression(ctx, node.children[0]).value;
+      const rOperand: QuadrupleArg = generateExpression(ctx, node.children[1]).value;
       switch (op) {
         case ParseOperatorType.BIN_ADD:
           ctx.addQuadruple(QuadrupleOperator.I_ADD, lOperand, rOperand, tempVar());
@@ -146,88 +150,88 @@ const generateExpression: generateRule<GeneratorAttributeExpression> = (ctx, nod
           break;
         case ParseOperatorType.BIN_ASS_ADD:
           ctx.addQuadruple(QuadrupleOperator.I_ADD, lOperand, rOperand, tempVar());
-          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgNull(), lOperand);
           break;
         case ParseOperatorType.BIN_ASS_SUB:
           ctx.addQuadruple(QuadrupleOperator.I_SUB, lOperand, rOperand, tempVar());
-          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgNull(), lOperand);
           break;
         case ParseOperatorType.BIN_ASS_MUL:
           ctx.addQuadruple(QuadrupleOperator.I_MUL, lOperand, rOperand, tempVar());
-          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgNull(), lOperand);
           break;
         case ParseOperatorType.BIN_ASS_DIV:
           ctx.addQuadruple(QuadrupleOperator.I_DIV, lOperand, rOperand, tempVar());
-          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgNull(), lOperand);
           break;
         case ParseOperatorType.BIN_ASS_VAL:
-          ctx.addQuadruple(QuadrupleOperator.A_ASS, rOperand, new QuadrupleArgumentNull(), lOperand);
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, rOperand, new QuadrupleArgNull(), lOperand);
           break;
       }
       returnVal = t || lOperand;
     }
-      break;
+                                 break;
     case ParseNodeType.VAL_UNINITIALIZED:
     case ParseNodeType.EXPR_ARR_ACCESS:
     case ParseNodeType.EXPR_FUNC_INVOKE:
     case ParseNodeType.EXPR_UNI: {
       const operand = generateExpression(ctx, node.children[0]).value;
       switch (node.value) {
-        case ParseOperatorType.UNI_POSIT:  
+        case ParseOperatorType.UNI_POSIT:
           break;
         case ParseOperatorType.UNI_NEGATE:
-          ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgumentValue(PrimitiveType.INT, 0), operand, tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), operand, tempVar());
           break;
         case ParseOperatorType.UNI_NOT:
           // TODO
           break;
         case ParseOperatorType.UNI_INC_PRE:
-          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
-          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
           break;
         case ParseOperatorType.UNI_INC_POS:
-          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
-          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
           break;
         case ParseOperatorType.UNI_DEC_PRE:
-          ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
-          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
           break;
         case ParseOperatorType.UNI_DEC_POS:
-          ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
-          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
           break;
-        
+
       }
       returnVal = t || operand;
     }
     default:
-      returnVal = new QuadrupleArgumentValue(PrimitiveType.INT, 1);
+      returnVal = new QuadrupleArgValue(PrimitiveType.INT, 1);
   }
   return new GeneratorAttributeExpression(returnVal);
-}
+};
 
 const generateDeclarationPrimitive: generateRule<IGeneratorAttribute> = (ctx, node) => {
   const type: PrimitiveType = node.children[0].value as PrimitiveType;
-  const declItems = node.children[1].children.map(i => {
+  const declItems = node.children[1].children.map((i) => {
     const name = i.children[0].value;
     const ref = ctx.addEntry(name);
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
       ctx.addQuadruple(QuadrupleOperator.A_ASS,
-        new QuadrupleArgumentValue(PrimitiveType.INT, 0),
-        new QuadrupleArgumentNull(),
+        new QuadrupleArgValue(PrimitiveType.INT, 0),
+        new QuadrupleArgNull(),
         ref,
-        'default initialization'
+        'default initialization',
       );
     } else {
       const value = generateExpression(ctx, i.children[1]);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, value.value, new QuadrupleArgumentNull(), ref);
+      ctx.addQuadruple(QuadrupleOperator.A_ASS, value.value, new QuadrupleArgNull(), ref);
     }
     return { name: i.children[0]};
   });
   return attr.valid();
-}
+};
 
 const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
   switch (node.type) {
@@ -238,12 +242,12 @@ const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node)
       generateExpression(ctx, node.children[0]);
       break;
   }
-  return new GeneratorAttributeStatement(new QuadrupleArgumentQuadRef(0));
-}
+  return new GeneratorAttributeStatement(new QuadrupleArgQuadRef(0));
+};
 
 const generateSource: generateRule<IGeneratorAttribute> = (ctx, node) => {
   const rootContext = ctx.pushContext();
-  const result = node.children.map(s => generateStatement(ctx, s));
+  const result = node.children.map((s) => generateStatement(ctx, s));
   // chain result up (by reduce)
   return attr.valid();
 };
