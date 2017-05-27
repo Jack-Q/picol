@@ -733,7 +733,9 @@ const parseStatementExprDecl: ParseFunc = (src) => {
     throw ParserError.expect(';', end);
   }
   src.adv();
-  return expr;
+  const exprStat = new ParseNode(ParseNodeType.STAT_EXPR);
+  exprStat.addChild(expr);
+  return exprStat;
 };
 
 // statement

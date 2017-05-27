@@ -30,4 +30,4 @@ printToken(tokenList.filter((t) => t.type === TokenType.INV_NO_MATCH || t.type =
 const ast = Main.parser(tokenList);
 ast.print();
 const quadrupleTable = Main.generator(ast);
-quadrupleTable.map((q) => console.log(q.toString()));
+quadrupleTable.map((q, i) => console.log(i + '\t', q.toString()));

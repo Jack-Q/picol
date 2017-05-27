@@ -1,5 +1,5 @@
-import { ParseNode, ParseNodeType } from './parser-node';
-import { Quadruple, QuadrupleArgumentQuadRef, QuadrupleArgument, QuadrupleArgumentValue, QuadrupleOperator, QuadrupleArgumentTableRef, QuadrupleArgumentNull } from './quadruple';
+import { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
+import { Quadruple, QuadrupleArgumentQuadRef, QuadrupleArgument, QuadrupleArgumentValue, QuadrupleOperator, QuadrupleArgumentTableRef, QuadrupleArgumentNull, QuadrupleArgumentVarTemp } from './quadruple';
 import { PrimitiveType } from './token';
 
 class GeneratorError extends Error {
@@ -14,7 +14,7 @@ class ExecutionContext {
   public parent: ExecutionContext;
   private nameTable: { [name: string]: { name: string } } = {}
   public get isRoot(): boolean {
-    return parent === undefined;
+    return this.parent === undefined;
   }
 
   constructor(parent: ExecutionContext) {
@@ -24,10 +24,18 @@ class ExecutionContext {
   public addEntry (name: string){
     this.nameTable[name] = { name };
   }
+
+  public getEntry(name: string, recursive: boolean = true): string {
+    if (this.nameTable[name]){
+      return this.nameTable[name].name;
+    }
+    return this.isRoot ? '' : this.parent.getEntry(name);
+  }
 }
 
 export class GeneratorContext {
   // the context contains all kinds of
+  private tempIndex = 0;
   private contextStack: ExecutionContext[] = [];
   private quadrupleList: Quadruple[] = [];
 
@@ -48,8 +56,13 @@ export class GeneratorContext {
     return this.currentContext;
   }
 
-  public addEntry(name: string) {
+  public addEntry(name: string): QuadrupleArgumentTableRef {
     this.currentContext.addEntry(name);
+    return new QuadrupleArgumentTableRef(name, 0);
+  }
+
+  public getEntry(name: string): QuadrupleArgumentTableRef {
+    return new QuadrupleArgumentTableRef(this.currentContext.getEntry(name), 0);
   }
 
   public addQuadruple(op: QuadrupleOperator, arg1: QuadrupleArgument, arg2: QuadrupleArgument, result: QuadrupleArgument, comment: string = '') {
@@ -60,6 +73,10 @@ export class GeneratorContext {
     quadruple.result = result;
     quadruple.comment = comment;
     this.quadrupleList.push(quadruple);
+  }
+
+  public getTempVar() {
+    return new QuadrupleArgumentVarTemp(this.tempIndex++);
   }
 }
 
@@ -90,37 +107,122 @@ const attr = {
 type generateRule<T extends IGeneratorAttribute> = (ctx: GeneratorContext, node: ParseNode) => T;
 
 const generateExpression: generateRule<GeneratorAttributeExpression> = (ctx, node) => {
+  let returnVal: QuadrupleArgument;
+  let t: QuadrupleArgument | null = null; 
+  const tempVar = (() => { return t = t || ctx.getTempVar()});
   switch (node.type) {
     case ParseNodeType.VAL_CONSTANT_INT:
+      returnVal = new QuadrupleArgumentValue(PrimitiveType.INT, node.value);
+      break;
+    case ParseNodeType.VAL_CONSTANT_BOOL:
+      returnVal = new QuadrupleArgumentValue(PrimitiveType.BOOL, node.value);
+      break;
+    case ParseNodeType.VAL_CONSTANT_CHAR:
+      returnVal = new QuadrupleArgumentValue(PrimitiveType.CHAR, node.value);
+      break;  
+    case ParseNodeType.VAL_CONSTANT_FLOAT:
+      returnVal = new QuadrupleArgumentValue(PrimitiveType.FLOAT, node.value);
+      break;  
+    case ParseNodeType.VAL_IDENTIFIER:
+      returnVal = ctx.getEntry(node.value);
+      break;  
+    case ParseNodeType.EXPR_BIN: {
+      
+      const op: ParseOperatorType = node.value;
+      const lOperand: QuadrupleArgument = generateExpression(ctx, node.children[0]).value;
+      const rOperand: QuadrupleArgument = generateExpression(ctx, node.children[1]).value;
+      switch (op) {
+        case ParseOperatorType.BIN_ADD:
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, lOperand, rOperand, tempVar());
+          break;
+        case ParseOperatorType.BIN_SUB:
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, lOperand, rOperand, tempVar());
+          break;
+        case ParseOperatorType.BIN_MULTI:
+          ctx.addQuadruple(QuadrupleOperator.I_MUL, lOperand, rOperand, tempVar());
+          break;
+        case ParseOperatorType.BIN_DIVIDE:
+          ctx.addQuadruple(QuadrupleOperator.I_DIV, lOperand, rOperand, tempVar());
+          break;
+        case ParseOperatorType.BIN_ASS_ADD:
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, lOperand, rOperand, tempVar());
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          break;
+        case ParseOperatorType.BIN_ASS_SUB:
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, lOperand, rOperand, tempVar());
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          break;
+        case ParseOperatorType.BIN_ASS_MUL:
+          ctx.addQuadruple(QuadrupleOperator.I_MUL, lOperand, rOperand, tempVar());
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          break;
+        case ParseOperatorType.BIN_ASS_DIV:
+          ctx.addQuadruple(QuadrupleOperator.I_DIV, lOperand, rOperand, tempVar());
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, tempVar(), new QuadrupleArgumentNull(), lOperand);
+          break;
+        case ParseOperatorType.BIN_ASS_VAL:
+          ctx.addQuadruple(QuadrupleOperator.A_ASS, rOperand, new QuadrupleArgumentNull(), lOperand);
+          break;
+      }
+      returnVal = t || lOperand;
+    }
+      break;
     case ParseNodeType.VAL_UNINITIALIZED:
-    case ParseNodeType.EXPR_BIN:
     case ParseNodeType.EXPR_ARR_ACCESS:
     case ParseNodeType.EXPR_FUNC_INVOKE:
-    case ParseNodeType.EXPR_UNI:
-    case ParseNodeType.VAL_CONSTANT_BOOL:
-    case ParseNodeType.VAL_CONSTANT_CHAR:
-    case ParseNodeType.VAL_CONSTANT_FLOAT:
-    case ParseNodeType.VAL_IDENTIFIER:
-    default:  
+    case ParseNodeType.EXPR_UNI: {
+      const operand = generateExpression(ctx, node.children[0]).value;
+      switch (node.value) {
+        case ParseOperatorType.UNI_POSIT:  
+          break;
+        case ParseOperatorType.UNI_NEGATE:
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgumentValue(PrimitiveType.INT, 0), operand, tempVar());
+          break;
+        case ParseOperatorType.UNI_NOT:
+          // TODO
+          break;
+        case ParseOperatorType.UNI_INC_PRE:
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
+          break;
+        case ParseOperatorType.UNI_INC_POS:
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
+          break;
+        case ParseOperatorType.UNI_DEC_PRE:
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
+          break;
+        case ParseOperatorType.UNI_DEC_POS:
+          ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 0), tempVar());
+          ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgumentValue(PrimitiveType.INT, 1), operand);
+          break;
+        
+      }
+      returnVal = t || operand;
+    }
+    default:
+      returnVal = new QuadrupleArgumentValue(PrimitiveType.INT, 1);
   }
-  return new GeneratorAttributeExpression(new QuadrupleArgumentValue(PrimitiveType.INT, 1));
+  return new GeneratorAttributeExpression(returnVal);
 }
 
 const generateDeclarationPrimitive: generateRule<IGeneratorAttribute> = (ctx, node) => {
   const type: PrimitiveType = node.children[0].value as PrimitiveType;
   const declItems = node.children[1].children.map(i => {
     const name = i.children[0].value;
+    const ref = ctx.addEntry(name);
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
-      ctx.addEntry(name);
       ctx.addQuadruple(QuadrupleOperator.A_ASS,
         new QuadrupleArgumentValue(PrimitiveType.INT, 0),
         new QuadrupleArgumentNull(),
-        new QuadrupleArgumentTableRef(name, 0),
+        ref,
         'default initialization'
       );
     } else {
       const value = generateExpression(ctx, i.children[1]);
+      ctx.addQuadruple(QuadrupleOperator.A_ASS, value.value, new QuadrupleArgumentNull(), ref);
     }
     return { name: i.children[0]};
   });
@@ -131,6 +233,9 @@ const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node)
   switch (node.type) {
     case ParseNodeType.STAT_DECLARATION_PRIM:
       generateDeclarationPrimitive(ctx, node);
+      break;
+    case ParseNodeType.STAT_EXPR:
+      generateExpression(ctx, node.children[0]);
       break;
   }
   return new GeneratorAttributeStatement(new QuadrupleArgumentQuadRef(0));

@@ -36,6 +36,7 @@ export enum QuadrupleOperator {
 
 export enum QuadrupleArgumentType {
   TABLE_REF,  // variable reference
+  VAR_TEMP,   // temporary variable 
   QUAD_REF,   // quadruple table reference
   ARRAY_ADDR, // array reference
   VALUE_INST, // instance value
@@ -102,6 +103,16 @@ export class QuadrupleArgumentQuadRef extends QuadrupleArgument{
 
   toString = () => `(${this.quadIndex})`
 }
+
+export class QuadrupleArgumentVarTemp extends QuadrupleArgument {
+  tempIndex: number;
+  constructor(tempIndex: number) {
+    super(QuadrupleArgumentType.VAR_TEMP);
+    this.tempIndex = tempIndex;
+  }
+  toString = () => `T_${this.tempIndex}`;
+}
+
 export class QuadrupleArgumentNull extends QuadrupleArgument{
 
   constructor() {
@@ -119,14 +130,15 @@ export class Quadruple {
   public result: QuadrupleArgument;
   public comment: string = '';
   toString() {
+    const pan = (str: string) => str + ' '.repeat(12).slice(str.length);
     return `${
-      QuadrupleOperator[this.operator]
+      pan(QuadrupleOperator[this.operator])
       }\t ${
-      this.argument1.toString()
+      pan(this.argument1.toString())
       }\t ${
-      this.argument2.toString()
+      pan(this.argument2.toString())
       }\t ${
-      this.result.toString()
+      pan(this.result.toString())
       }` + (this.comment ? `\t # `+ this.comment:'');
   }
 }
