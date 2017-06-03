@@ -4,10 +4,10 @@ export enum QuadrupleOperator {
   J_JMP, // jump unconditionally
   J_EQ,  // jump if equal
   J_NE,  // jump if not equal
-  J_GE,  // jump if greater than
-  J_GEQ, // jump if greater than or equal
-  J_LE,  // jump if less than
-  J_LEQ, // jump if less than or equal
+  J_GT,  // jump if greater than
+  J_GTE, // jump if greater than or equal
+  J_LT,  // jump if less than
+  J_LTE, // jump if less than or equal
   J_EZ,  // jump if equal to zero
   J_NEZ, // jump if not equal to zero
 
@@ -17,11 +17,11 @@ export enum QuadrupleOperator {
   I_MUL,
   I_DIV,
 
-  // float point arithmetic
-  F_ADD,
-  F_SUB,
-  F_MUL,
-  F_DIV,
+  // float point (real) arithmetic
+  R_ADD,
+  R_SUB,
+  R_MUL,
+  R_DIV,
 
   // primitive variable assignment
   V_ASS,
@@ -31,7 +31,10 @@ export enum QuadrupleOperator {
   A_RET,
 
   // procedure call
-  F_FUNC,
+  F_PARA, // prepare argument for procedural call
+  F_FUNC, // call procedural
+  F_RET,  // function return
+  F_VAL,  // bind return value of function to temp
 }
 
 export enum QuadrupleArgType {
@@ -115,11 +118,14 @@ export class QuadrupleArgVarTemp extends QuadrupleArg {
 
 export class QuadrupleArgNull extends QuadrupleArg {
 
-  constructor() {
+  public static Q_NULL: QuadrupleArgNull = new QuadrupleArgNull();
+
+  private constructor() {
     super(QuadrupleArgType.NULL);
   }
 
   public toString = () => `_`;
+
 }
 
 export class Quadruple {
