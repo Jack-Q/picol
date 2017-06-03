@@ -43,6 +43,7 @@ export class GeneratorContext {
   private tempIndex = 0;
   private contextStack: ExecutionContext[] = [];
   private quadrupleList: Quadruple[] = [];
+  private breakChain: number[] = [];
 
   public get currentContext(): ExecutionContext {
     return this.contextStack[this.contextStack.length - 1];
@@ -108,6 +109,18 @@ export class GeneratorContext {
       }
     }
     return nHead;
+  }
+
+  public pushBreakChain(head: number = 0) {
+    this.breakChain.push(head);
+  }
+
+  public popBreakChain(): number {
+    const chain = this.breakChain.pop();
+    if (chain === undefined) {
+      throw new GeneratorError('pop empty break chain context');
+    }
+    return chain;
   }
 }
 
@@ -379,6 +392,14 @@ const generateDeclarationPrimitive: generateRule<IGeneratorAttribute> = (ctx, no
   return attr.valid();
 };
 
+const generateDeclarationArray: generateRule<IGeneratorAttribute> = (ctx, node) => {
+  return attr.valid();
+};
+
+const generateFunction: generateRule<IGeneratorAttribute> = (ctx, node) => {
+  return attr.valid();
+};
+
 const generateStatementIf: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
   const condition = generateExpression(ctx, node.children[0]);
   condition.toBoolean(ctx);
@@ -445,6 +466,51 @@ const generateStatementDo: generateRule<GeneratorAttributeStatement> = (ctx, nod
   return new GeneratorAttributeStatement(condition.falseChain);
 };
 
+const generateStatementSwitch: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  ctx.pushBreakChain(0);
+
+  const exprAttr = generateExpression(ctx, node.children[0]).toValue(ctx);
+  const gotoTest = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
+    'Switch: jump to table');
+  const jumpTable: Array<[ParseNode, number]> = [];
+  let defaultQuad = -1;
+
+  // this chain is the last statement of switch body
+  const lastStatChain = node.children[1].children.reduce((lastChain, stat) => {
+    const nxq = ctx.nextQuadrupleIndex;
+    ctx.backPatchChain(lastChain, nxq);
+    if (stat.type === ParseNodeType.SEG_CASE_LABEL) {
+      jumpTable.push([stat.children[0], nxq]);
+      return 0;
+    }
+    if (stat.type === ParseNodeType.SEG_DEFAULT_LABEL) {
+      defaultQuad = nxq;
+      return 0;
+    }
+    return generateStatement(ctx, stat).chain;
+  }, 0);
+  ctx.backPatchChain(lastStatChain, ctx.nextQuadrupleIndex);
+
+  const blockChain = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
+    'Switch: end of switch body');
+
+  // generate test table
+  ctx.backPatchChain(gotoTest, ctx.nextQuadrupleIndex);
+  jumpTable.map((item) => {
+    const itemAttr = generateExpression(ctx, item[0]).toValue(ctx);
+    ctx.addQuadruple(QuadrupleOperator.J_EQ, exprAttr, itemAttr, new QuadrupleArgQuadRef(item[1]),
+      'switch: case ' + itemAttr.toString());
+  });
+  if (defaultQuad >= 0) {
+    ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(defaultQuad),
+      'switch: default case');
+  }
+
+  return new GeneratorAttributeStatement(ctx.mergeChain(blockChain, ctx.popBreakChain()));
+};
+
 const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
   switch (node.type) {
     case ParseNodeType.STAT_IF:
@@ -457,6 +523,20 @@ const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node)
       return generateStatementWhile(ctx, node);
     case ParseNodeType.STAT_DO:
       return generateStatementDo(ctx, node);
+    case ParseNodeType.STAT_SWITCH:
+      return generateStatementSwitch(ctx, node);
+
+    case ParseNodeType.STAT_RETURN:
+    case ParseNodeType.STAT_RETURN_VOID:
+    case ParseNodeType.STAT_BREAK:
+    case ParseNodeType.STAT_CONTINUE:
+
+    case ParseNodeType.STAT_FUNCTION:
+      generateFunction(ctx, node);
+      break;
+    case ParseNodeType.STAT_DECLARATION_ARR:
+      generateDeclarationArray(ctx, node);
+      break;
     case ParseNodeType.STAT_DECLARATION_PRIM:
       generateDeclarationPrimitive(ctx, node);
       break;
