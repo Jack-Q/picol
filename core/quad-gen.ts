@@ -433,6 +433,18 @@ const generateStatementWhile: generateRule<GeneratorAttributeStatement> = (ctx, 
   return new GeneratorAttributeStatement(condition.falseChain);
 };
 
+const generateStatementDo: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  const beginNxq = ctx.nextQuadrupleIndex;
+  const body = generateStatement(ctx, node.children[0]);
+  ctx.backPatchChain(body.chain, ctx.nextQuadrupleIndex);
+
+  const condition = generateExpression(ctx, node.children[1]);
+  condition.toBoolean(ctx);
+  ctx.backPatchChain(condition.trueChain, beginNxq); // condition satisfied
+
+  return new GeneratorAttributeStatement(condition.falseChain);
+};
+
 const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
   switch (node.type) {
     case ParseNodeType.STAT_IF:
@@ -443,6 +455,8 @@ const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node)
       return generateStatementSequence(ctx, node);
     case ParseNodeType.STAT_WHILE:
       return generateStatementWhile(ctx, node);
+    case ParseNodeType.STAT_DO:
+      return generateStatementDo(ctx, node);
     case ParseNodeType.STAT_DECLARATION_PRIM:
       generateDeclarationPrimitive(ctx, node);
       break;
