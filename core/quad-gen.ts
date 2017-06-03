@@ -44,6 +44,7 @@ export class GeneratorContext {
   private contextStack: ExecutionContext[] = [];
   private quadrupleList: Quadruple[] = [];
   private breakChain: number[] = [];
+  private continueChain: number[] = [];
 
   public get currentContext(): ExecutionContext {
     return this.contextStack[this.contextStack.length - 1];
@@ -121,6 +122,33 @@ export class GeneratorContext {
       throw new GeneratorError('pop empty break chain context');
     }
     return chain;
+  }
+
+  public mergeIntoBreakChain(chain: number) {
+    const len = this.breakChain.length;
+    if (len === 0) {
+      throw new GeneratorError('no break chain, break statement outside of breakable block');
+    }
+    this.breakChain[len - 1] = this.mergeChain(this.breakChain[len - 1], chain);
+  }
+
+  public pushContinueChain(head: number = 0) {
+    this.continueChain.push(head);
+  }
+
+  public popContinueChain(): number {
+    const chain = this.continueChain.pop();
+    if (chain === undefined) {
+      throw new GeneratorError('pop empty break chain context');
+    }
+    return chain;
+  }
+  public mergeIntoContinueChain(chain: number) {
+    const len = this.continueChain.length;
+    if (len === 0) {
+      throw new GeneratorError('no continue chain, continue statement outside of loop block');
+    }
+    this.continueChain[len - 1] = this.mergeChain(this.continueChain[len - 1], chain);
   }
 }
 
@@ -438,6 +466,10 @@ const generateStatementSequence: generateRule<GeneratorAttributeStatement> = (ct
 };
 
 const generateStatementWhile: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  // while statement can embrace break and continue
+  ctx.pushBreakChain(0);
+  ctx.pushContinueChain(0);
+
   const beginNxq = ctx.nextQuadrupleIndex;
   const condition = generateExpression(ctx, node.children[0]);
   condition.toBoolean(ctx);
@@ -451,19 +483,35 @@ const generateStatementWhile: generateRule<GeneratorAttributeStatement> = (ctx, 
 
   ctx.backPatchChain(body.chain, beginNxq);
 
-  return new GeneratorAttributeStatement(condition.falseChain);
+  const breakChain = ctx.popBreakChain();
+  const continueChain = ctx.popContinueChain();
+
+  ctx.backPatchChain(continueChain, beginNxq);
+  const exitChain = ctx.mergeChain(condition.falseChain, breakChain);
+
+  return new GeneratorAttributeStatement(exitChain);
 };
 
 const generateStatementDo: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  // do statement can embrace break and continue
+  ctx.pushBreakChain(0);
+  ctx.pushContinueChain(0);
   const beginNxq = ctx.nextQuadrupleIndex;
   const body = generateStatement(ctx, node.children[0]);
   ctx.backPatchChain(body.chain, ctx.nextQuadrupleIndex);
 
+  const conditionQuad = ctx.nextQuadrupleIndex;
   const condition = generateExpression(ctx, node.children[1]);
   condition.toBoolean(ctx);
   ctx.backPatchChain(condition.trueChain, beginNxq); // condition satisfied
 
-  return new GeneratorAttributeStatement(condition.falseChain);
+  const breakChain = ctx.popBreakChain();
+  const continueChain = ctx.popContinueChain();
+
+  ctx.backPatchChain(continueChain, conditionQuad);
+  const exitChain = ctx.mergeChain(breakChain, condition.falseChain);
+
+  return new GeneratorAttributeStatement(exitChain);
 };
 
 const generateStatementSwitch: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
@@ -511,6 +559,32 @@ const generateStatementSwitch: generateRule<GeneratorAttributeStatement> = (ctx,
   return new GeneratorAttributeStatement(ctx.mergeChain(blockChain, ctx.popBreakChain()));
 };
 
+const generateStatementReturn: generateRule<IGeneratorAttribute> = (ctx, node) => {
+  const exprAttr = generateExpression(ctx, node.children[0]).toValue(ctx);
+  ctx.addQuadruple(QuadrupleOperator.F_REV, Q_NULL, Q_NULL, exprAttr);
+  ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
+  return attr.valid();
+};
+
+const generateStatementReturnVoid: generateRule<IGeneratorAttribute> = (ctx, node) => {
+  ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
+  return attr.valid();
+};
+
+const generateStatementBreak: generateRule<IGeneratorAttribute> = (ctx, node) => {
+  const nxq = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0), 'break');
+  ctx.mergeIntoBreakChain(nxq);
+  return attr.valid();
+};
+
+const generateStatementContinue: generateRule<IGeneratorAttribute> = (ctx, node) => {
+  const nxq = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL,  new QuadrupleArgQuadRef(0), 'continue');
+  ctx.mergeIntoContinueChain(nxq);
+  return attr.valid();
+};
+
 const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
   switch (node.type) {
     case ParseNodeType.STAT_IF:
@@ -527,9 +601,17 @@ const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node)
       return generateStatementSwitch(ctx, node);
 
     case ParseNodeType.STAT_RETURN:
+      generateStatementReturn(ctx, node);
+      break;
     case ParseNodeType.STAT_RETURN_VOID:
+      generateStatementReturnVoid(ctx, node);
+      break;
     case ParseNodeType.STAT_BREAK:
+      generateStatementBreak(ctx, node);
+      break;
     case ParseNodeType.STAT_CONTINUE:
+      generateStatementContinue(ctx, node);
+      break;
 
     case ParseNodeType.STAT_FUNCTION:
       generateFunction(ctx, node);

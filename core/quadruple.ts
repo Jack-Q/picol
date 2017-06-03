@@ -32,8 +32,9 @@ export enum QuadrupleOperator {
 
   // procedure call
   F_PARA, // prepare argument for procedural call
-  F_FUNC, // call procedural
-  F_RET,  // function return
+  F_FUNC, // call procedural (control of flow)
+  F_REV,  // prepare return value
+  F_RET,  // function return (control of flow)
   F_VAL,  // bind return value of function to temp
 }
 
