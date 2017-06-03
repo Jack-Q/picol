@@ -95,6 +95,9 @@ export class GeneratorContext {
   }
 
   public mergeChain(oHead: number, nHead: number): number {
+    if (nHead === 0) {
+      return oHead;
+    }
     let q = nHead;
     while (true) {
       const quadRef = this.quadrupleList[q].result as QuadrupleArgQuadRef;
@@ -114,8 +117,8 @@ interface IGeneratorAttribute {
 
 class GeneratorAttributeStatement implements IGeneratorAttribute {
   public isValid = true;
-  public chain: QuadrupleArgQuadRef;
-  constructor(chain: QuadrupleArgQuadRef) {
+  public chain: number;
+  constructor(chain: number) {
     this.chain = chain;
   }
 }
@@ -152,8 +155,10 @@ class GeneratorAttributeExpression implements IGeneratorAttribute {
     this.isBoolean = true;
     this.trueChain = nxq;
     this.falseChain = nxq + 1;
-    ctx.addQuadruple(QuadrupleOperator.J_NEZ, this.value, Q_NULL, new QuadrupleArgQuadRef(0));
-    ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0));
+    ctx.addQuadruple(QuadrupleOperator.J_NEZ, this.value, Q_NULL, new QuadrupleArgQuadRef(0),
+      'convert value to boolean: value is not zero (truly)');
+    ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
+      'convert value to boolean: value is zero (falsy)');
   }
 
   // convert boolean chain to value
@@ -307,34 +312,39 @@ const generateExpression: generateRule<GeneratorAttributeExpression> = (ctx, nod
       break;
     case ParseNodeType.EXPR_UNI:
       {
-        const operand = generateExpression(ctx, node.children[0]).toValue(ctx);
+        const operand = generateExpression(ctx, node.children[0]);
+        if (node.value === ParseOperatorType.UNI_NOT) {
+          operand.toBoolean(ctx);
+          boolExpr = true;
+          trueChain = operand.falseChain;
+          falseChain = operand.trueChain;
+          break;
+        }
+        const opVal = operand.toValue(ctx);
         switch (node.value) {
           case ParseOperatorType.UNI_POSIT:
             break;
           case ParseOperatorType.UNI_NEGATE:
-            ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), operand, tempVar());
-            break;
-          case ParseOperatorType.UNI_NOT:
-            // TODO
+            ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), opVal, tempVar());
             break;
           case ParseOperatorType.UNI_INC_PRE:
-            ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
-            ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
+            ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, new QuadrupleArgValue(PrimitiveType.INT, 1), opVal);
+            ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
             break;
           case ParseOperatorType.UNI_INC_POS:
-            ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
-            ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
+            ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
+            ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, new QuadrupleArgValue(PrimitiveType.INT, 1), opVal);
             break;
           case ParseOperatorType.UNI_DEC_PRE:
-            ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
-            ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
+            ctx.addQuadruple(QuadrupleOperator.I_SUB, opVal, new QuadrupleArgValue(PrimitiveType.INT, 1), opVal);
+            ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
             break;
           case ParseOperatorType.UNI_DEC_POS:
-            ctx.addQuadruple(QuadrupleOperator.I_SUB, operand, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
-            ctx.addQuadruple(QuadrupleOperator.I_ADD, operand, new QuadrupleArgValue(PrimitiveType.INT, 1), operand);
+            ctx.addQuadruple(QuadrupleOperator.I_SUB, opVal, new QuadrupleArgValue(PrimitiveType.INT, 0), tempVar());
+            ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, new QuadrupleArgValue(PrimitiveType.INT, 1), opVal);
             break;
         }
-        returnVal = t || operand;
+        returnVal = t || opVal;
       }
       break;
     case ParseNodeType.VAL_UNINITIALIZED:
@@ -369,22 +379,87 @@ const generateDeclarationPrimitive: generateRule<IGeneratorAttribute> = (ctx, no
   return attr.valid();
 };
 
+const generateStatementIf: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  const condition = generateExpression(ctx, node.children[0]);
+  condition.toBoolean(ctx);
+  ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
+  const body = generateStatement(ctx, node.children[1]);
+  const chain = ctx.mergeChain(condition.falseChain, body.chain);
+  return new GeneratorAttributeStatement(chain);
+};
+
+const generateStatementIfElse: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  const condition = generateExpression(ctx, node.children[0]);
+  condition.toBoolean(ctx);
+
+  ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
+  const bodyThen = generateStatement(ctx, node.children[1]);
+
+  const jumpChain = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
+    'end of if-then block');
+  bodyThen.chain = ctx.mergeChain(bodyThen.chain, jumpChain);
+
+  ctx.backPatchChain(condition.falseChain, ctx.nextQuadrupleIndex); // condition satisfied
+  const bodyElse = generateStatement(ctx, node.children[2]);
+
+  const chain = ctx.mergeChain(bodyThen.chain, bodyElse.chain);
+  return new GeneratorAttributeStatement(chain);
+};
+
+const generateStatementSequence: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  // TODO: new execution context
+  const chain = node.children.reduce((lastChain, stat) => {
+    ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
+    return generateStatement(ctx, stat).chain;
+  }, 0);
+  return new GeneratorAttributeStatement(chain);
+};
+
+const generateStatementWhile: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
+  const beginNxq = ctx.nextQuadrupleIndex;
+  const condition = generateExpression(ctx, node.children[0]);
+  condition.toBoolean(ctx);
+  ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
+  const body = generateStatement(ctx, node.children[1]);
+
+  const jumpChain = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
+    'end of while loop');
+  body.chain = ctx.mergeChain(body.chain, jumpChain);
+
+  ctx.backPatchChain(body.chain, beginNxq);
+
+  return new GeneratorAttributeStatement(condition.falseChain);
+};
+
 const generateStatement: generateRule<GeneratorAttributeStatement> = (ctx, node) => {
   switch (node.type) {
+    case ParseNodeType.STAT_IF:
+      return generateStatementIf(ctx, node);
+    case ParseNodeType.STAT_IF_ELSE:
+      return generateStatementIfElse(ctx, node);
+    case ParseNodeType.STAT_SEQUENCE:
+      return generateStatementSequence(ctx, node);
+    case ParseNodeType.STAT_WHILE:
+      return generateStatementWhile(ctx, node);
     case ParseNodeType.STAT_DECLARATION_PRIM:
       generateDeclarationPrimitive(ctx, node);
       break;
     case ParseNodeType.STAT_EXPR:
       generateExpression(ctx, node.children[0]);
+      // discard the result of single expression as a statement
       break;
   }
-  return new GeneratorAttributeStatement(new QuadrupleArgQuadRef(0));
+  return new GeneratorAttributeStatement(0);
 };
 
 const generateSource: generateRule<IGeneratorAttribute> = (ctx, node) => {
   const rootContext = ctx.pushContext();
-  const result = node.children.map((s) => generateStatement(ctx, s));
-  // chain result up (by reduce)
+  const result = node.children.reduce((lastChain, s) => {
+    ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
+    return generateStatement(ctx, s).chain;
+  }, 0);
   return attr.valid();
 };
 
