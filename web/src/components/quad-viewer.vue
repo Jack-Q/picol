@@ -58,7 +58,7 @@ export default class QuadViewer extends Vue {
   display: flex;
   line-height: 30px;
   font-size: 16px;
-  background: #eee;
+  background: #efefef;
   transition: all ease 400ms;
 }
 .quadruple-item:hover {

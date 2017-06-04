@@ -89,7 +89,7 @@ const OperatorMap: {[op: string]: TokenType} = {
   '/': TokenType.OP_DIVIDE,
   '>': TokenType.OP_REL_GT,
   '>=': TokenType.OP_REL_GTE,
-  '=': TokenType.OP_REL_EQ,
+  '==': TokenType.OP_REL_EQ,
   '!=': TokenType.OP_REL_NE,
   '<': TokenType.OP_REL_LT,
   '<=': TokenType.OP_REL_LTE,
