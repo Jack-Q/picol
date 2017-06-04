@@ -1,6 +1,5 @@
 import * as fs from 'fs';
-import Main from './main';
-import { Token, TokenType } from './token';
+import Main, { Token, TokenType } from './main';
 
 const printToken = (tokenIterator: Iterable<Token>): void => {
   for (const token of tokenIterator) {

@@ -3,6 +3,7 @@
 </template>
 
 <script lang='ts'>
+/// <reference path="../../../../node_modules/monaco-editor/monaco.d.ts" />
 import { Component, Vue, p, Prop, Lifecycle, Watch } from 'av-ts';
 import { debounce } from 'lodash';
 import monacoLoader from './monaco-loader';
@@ -33,7 +34,7 @@ export default class MonacoEditor extends Vue {
     glyphMargin: true,
   }
 
-  editor: any
+  editor: monaco.editor.ICodeEditor
   monaco: any
   codeChangeEmitter: any
 
@@ -104,7 +105,9 @@ export default class MonacoEditor extends Vue {
     this.monaco = global.monaco;
     this.$emit('mounted', this.editor);
     this.editor = global.monaco.editor.create(this.$el, this.editorOptions);
+    global.editor = this.editor;
     this.editor.onDidChangeModelContent(() => this.codeChangeHandler(this.editor));
+    this.codeChangeHandler(this.editor); // manually trigger initial code 
   }
 
   destroyMonaco() {

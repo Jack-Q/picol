@@ -18,4 +18,4 @@ applications that illustrates the construction of a simple compiler
 
 ## License
 
-Picol id licensed under MIT License. Copyright &copy; 2017 Jack Q
+Picol is licensed under MIT License. Copyright &copy; 2017 Jack Q

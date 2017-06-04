@@ -6,13 +6,14 @@ import { PrimitiveType, Token, TokenType, TokenTypeUtil } from './token';
 
 class ParserError extends Error {
   public static expect = (e: string, t: Token | null): ParserError =>
-    new ParserError(`expecting "${e}" at ${t !== null ? t.getPositionString() : 'the end'}`)
+    new ParserError(`expecting "${e}" at ${t !== null ? t.getPositionString() : 'the end'}`, t)
   public static error = (e: string, t: Token | null): ParserError =>
-    new ParserError(`${e}, error at ${t !== null ? t.getPositionString() : 'the end'}`)
+    new ParserError(`${e}, error at ${t !== null ? t.getPositionString() : 'the end'}`, t)
 
   public token: Token | null;
-  constructor(message: string) {
+  private constructor(message: string, token: Token | null) {
     super(message);
+    this.token = token;
     this.name = 'ParserError';
   }
 }
