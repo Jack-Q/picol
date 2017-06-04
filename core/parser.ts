@@ -233,6 +233,34 @@ const parseExpression: ParseFunc = (src) => {
   return parseExpressionWeight(src, 0, expr, getBinaryParseOperator(t.type));
 };
 
+// a[,,,]
+const parseArrayRefType: ParseFunc = (src, type) => {
+  const t = src.get();
+  if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
+    debugger;
+    return type || null;
+  }
+  let dim = 1; // empty brackets is a reference to one dimension array: int[]
+  while (true) {
+    const comma = src.adv();
+    if (comma !== null && comma.type === TokenType.DIM_COMMA) {
+      dim++;
+      continue;
+    }
+    if (comma !== null && comma.type === TokenType.DIM_R_BRACKET) {
+      src.adv();
+      if (type.type === ParseNodeType.TYPE_ARRAY_REF) {
+        type.value += dim;
+        return parseArrayRefType(src, type);
+      } else {
+        const arrayRefType = ParseNode.createArrayRefType(type, dim);
+        return parseArrayRefType(src, arrayRefType);
+      }
+    }
+    throw ParserError.expect(', ]', t);
+  }
+};
+
 // [1,2,3]
 const parseArrayDimension: ParseFunc = (src) => {
   const lBracket = src.get();
@@ -294,8 +322,12 @@ const parseType: ParseFunc = (src) => {
 
   t = src.adv();
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) { return primType; }
-  const arrayType = parseArrayType(src, primType);
-  return arrayType;
+  const peek = src.peek(1);
+  if (peek !== null && (peek.type === TokenType.DIM_R_BRACKET || peek.type === TokenType.DIM_COMMA)) {
+    return parseArrayRefType(src, primType);
+  } else {
+    return parseArrayType(src, primType);
+  }
 };
 
 // { stat1; stat2; }
@@ -633,6 +665,8 @@ const parseFunction: ParseFunc = (src, type, id) => {
   }
 
   const node = new ParseNode(ParseNodeType.STAT_FUNCTION);
+  node.addChild(id);
+  node.addChild(type);
   node.addChild(param);
   node.addChild(body);
 
@@ -724,6 +758,13 @@ const parseStatementDeclaration: ParseFunc = (src) => {
       throw ParserError.error('array declaration can only specify on variable', t);
     } else if (t.type === TokenType.OP_ASS_VAL) {
       throw ParserError.error('array declaration cannot assign value', t);
+    }
+  } else if (type.type === ParseNodeType.TYPE_ARRAY_REF) {
+    if ([TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {
+      const list = parseDeclareList(src, id);
+      if (list !== null) {
+        return ParseNode.createDeclarationArrayRef(type, list);
+      }
     }
   } else if (type.type === ParseNodeType.TYPE_PRIMITIVE) {
     if ([TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {

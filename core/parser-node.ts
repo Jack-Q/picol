@@ -113,6 +113,7 @@ export enum ParseNodeType {
 
   STAT_DECLARATION_PRIM,
   STAT_DECLARATION_ARR,
+  STAT_DECLARATION_ARR_REF,
   STAT_SEQUENCE,
   STAT_RETURN,
   STAT_RETURN_VOID,
@@ -138,6 +139,7 @@ export enum ParseNodeType {
 
   TYPE_ARRAY,
   TYPE_PRIMITIVE,
+  TYPE_ARRAY_REF,
 
   EXPR_UNI,
   EXPR_BIN,
@@ -159,6 +161,13 @@ export class ParseNode {
 
   public static createDeclarationPrimitive(declareType: ParseNode, declareList: ParseNode) {
     const node = new ParseNode(ParseNodeType.STAT_DECLARATION_PRIM);
+    node.addChild(declareType);
+    node.addChild(declareList);
+    return node;
+  }
+
+  public static createDeclarationArrayRef(declareType: ParseNode, declareList: ParseNode) {
+    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_ARR_REF);
     node.addChild(declareType);
     node.addChild(declareList);
     return node;
@@ -195,6 +204,13 @@ export class ParseNode {
     const node = new ParseNode(ParseNodeType.TYPE_ARRAY);
     node.addChild(elementType);
     node.addChild(dimension);
+    return node;
+  }
+
+  public static createArrayRefType(elementType: ParseNode, dimension: number) {
+    const node = new ParseNode(ParseNodeType.TYPE_ARRAY_REF);
+    node.addChild(elementType);
+    node.value = dimension;
     return node;
   }
   public static createArrayAccess(id: ParseNode, dimension: ParseNode) {
