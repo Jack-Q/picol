@@ -8,19 +8,31 @@
 
       </div>
       <div class="main-stack">
-        <div class="src-editor">
-          <monaco-editor
-            :code="code"
-            :options="editorOptions"
-            srcPath=''
-            width='100%'
-            height='100%'
-            theme='PicolTheme'
-            @mounted="editorMounted"
-            @codeChange="editorCodeChange"
-            language='Picol'>
-          </monaco-editor>
-        </div>
+        <ui-tabs type="icon" fullwidth>
+          <ui-tab icon="book">
+            <div class="src-editor">
+              <monaco-editor
+                :code="code"
+                :options="editorOptions"
+                srcPath=''
+                width='100%'
+                height='100%'
+                theme='PicolTheme'
+                @mounted="editorMounted"
+                @codeChange="editorCodeChange"
+                language='Picol'>
+              </monaco-editor>
+            </div>
+          </ui-tab>
+          <ui-tab icon="person">
+              Authors
+          </ui-tab>
+          <ui-tab icon="collections_bookmark">
+              My collections
+          </ui-tab>
+          <ui-tab icon="favorite">
+          </ui-tab>
+        </ui-tabs>
       </div>
       <div class="right-aside">
         <div v-if="ast">{{ ast }}</div>
@@ -36,6 +48,9 @@ import { Component, Vue } from 'av-ts';
 import MonacoTokenizer from '../util/monaco-tokenizer';
 import MonacoEditor from './monaco-editor/monaco-editor';
 
+import AstViewer from './ast-viewer';
+import QuadViewer from './quad-viewer';
+
 import core, { Token, TokenType, ParseNode, Quadruple } from '../../../core/main';
 
 const loadLanguage = (): void => {
@@ -48,6 +63,8 @@ const loadLanguage = (): void => {
 @Component({
   components: {
     MonacoEditor,
+    AstViewer,
+    QuadViewer,
   },
 })
 export default class Index extends Vue {
@@ -80,7 +97,7 @@ export default class Index extends Vue {
           source: "Lexer"
         });
         return;
-      } 
+      }
       if (t.type === TokenType.SP_WHITE) {
         return;
       }
@@ -125,7 +142,7 @@ export default class Index extends Vue {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
+<style>
 .root{
   height: 100%;
   width: 100%;
@@ -141,14 +158,33 @@ export default class Index extends Vue {
 }
 .body > div {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 .left-aside {
   flex: 1;
 }
 .main-stack {
   flex: 4;
+  position: relative;
 }
+
+.main-stack .ui-tabs {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-stack .ui-tab {
+  height: 100%;
+}
+
+.main-stack .ui-tabs__body {
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+
 .right-aside {
   flex: 1;
 }
