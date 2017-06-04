@@ -429,6 +429,7 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
 };
 
 const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
+
   return attr.valid();
 };
 

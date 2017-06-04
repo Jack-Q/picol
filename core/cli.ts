@@ -8,7 +8,7 @@ const printToken = (tokenIterator: Iterable<Token>): void => {
       console.error(
         '\x1b[1;35m' + TokenType[token.type], '\t',
         JSON.stringify(token.literal), '\t',
-        token.value || '',
+        token.value === undefined ? '' : token.value,
         '\x1b[0m',
       );
     } else {

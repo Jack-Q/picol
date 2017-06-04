@@ -27,6 +27,9 @@ interface ITokenSource {
 type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode | null;
 
 // arr[a,b,c][a,b,c]
+// since there is no significant difference between
+// array of array of some type and a multi-dimension array of the same type,
+// the separation of dimension group will be flatten during the compiling phase
 const parseExpressionArray: ParseFunc = (src, id) => {
   const t = src.get();
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
@@ -36,10 +39,17 @@ const parseExpressionArray: ParseFunc = (src, id) => {
   if (dim === null) {
     throw ParserError.expect('Array dimension', t);
   }
-  const arrAccess = ParseNode.createArrayAccess(id, dim);
-
-  // use recursion here for array of array ...
-  return parseArrayType(src, arrAccess);
+  if (id.type === ParseNodeType.EXPR_ARR_ACCESS) {
+    // flatten array access
+    id.children[1].children.push(...dim.children);
+    // use recursion here for array of array ...
+    return parseExpressionArray(src, id);
+  } else {
+    // create new array access
+    const arrAccess = ParseNode.createArrayAccess(id, dim);
+    // use recursion here for array of array ...
+    return parseExpressionArray(src, arrAccess);
+  }
 };
 
 // func(a,b,c)
@@ -264,10 +274,16 @@ const parseArrayType: ParseFunc = (src, type) => {
   if (dim === null) {
     throw ParserError.expect('Array dimension', t);
   }
-  const arrayType = ParseNode.createArrayType(type, dim);
+  if (type.type === ParseNodeType.TYPE_ARRAY) {
+    // flatten array type declaration
+    type.children[1].children.push(...dim.children);
+    return parseArrayType(src, type);
+  } else {
+    const arrayType = ParseNode.createArrayType(type, dim);
 
-  // use recursion here for array of array ...
-  return parseArrayType(src, arrayType);
+    // use recursion here for array of array ...
+    return parseArrayType(src, arrayType);
+  }
 };
 
 // int a(int m, int n){}

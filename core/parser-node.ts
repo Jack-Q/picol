@@ -253,7 +253,7 @@ export class ParseNode {
       case ParseNodeType.TYPE_PRIMITIVE: return PrimitiveType[this.value];
       case ParseNodeType.VAL_UNINITIALIZED: return 'no initialization';
     }
-    return this.value || '';
+    return this.value === undefined ? '' : this.value;
   }
 
   public addChild = (child: ParseNode | null): boolean => {
