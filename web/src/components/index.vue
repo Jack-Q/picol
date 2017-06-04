@@ -9,6 +9,9 @@
       </div>
       <div class="main-stack">
         <ui-tabs type="icon" fullwidth>
+          <ui-tab icon="device_hub">
+              <ast-viewer :ast="ast"></ast-viewer>
+          </ui-tab>
           <ui-tab icon="code">
             <div class="src-editor">
               <monaco-editor
@@ -23,9 +26,6 @@
                 language='Picol'>
               </monaco-editor>
             </div>
-          </ui-tab>
-          <ui-tab icon="device_hub">
-              <ast-viewer :ast="ast"></ast-viewer>
           </ui-tab>
           <ui-tab icon="list">
               <quad-viewer :quadList="quadrupleTable"></quad-viewer>
@@ -60,6 +60,7 @@ const loadLanguage = (): void => {
 };
 
 @Component({
+  name: 'index',
   components: {
     MonacoEditor,
     AstViewer,
@@ -67,7 +68,6 @@ const loadLanguage = (): void => {
   },
 })
 export default class Index extends Vue {
-  name = 'index'
   code = MonacoTokenizer.picolSample.default
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
   ast: ParseNode|null = null
