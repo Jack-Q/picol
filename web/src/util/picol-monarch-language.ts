@@ -53,7 +53,7 @@ const picolLanguage: IPicolMonarchLanguage = {
     ['{', '}', 'delimiter.curly'],
     ['(', ')', 'delimiter.parenthesis'],
     ['[', ']', 'delimiter.square'],
-  ],
+  ].map((i) => ({ open: i[0], close: i[1], token: i[2]})),
 
   tokenizer: {
     root: [

@@ -237,7 +237,6 @@ const parseExpression: ParseFunc = (src) => {
 const parseArrayRefType: ParseFunc = (src, type) => {
   const t = src.get();
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
-    debugger;
     return type || null;
   }
   let dim = 1; // empty brackets is a reference to one dimension array: int[]

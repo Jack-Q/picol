@@ -57,7 +57,7 @@ export class QuadrupleArg {
     this.type = type;
   }
   public toString: () => string = () => QuadrupleArgType[this.type];
-  public get name (): string {return this.toString(); }
+  public get name(): string { return this.toString(); }
 }
 
 export class QuadrupleArgValue extends QuadrupleArg {

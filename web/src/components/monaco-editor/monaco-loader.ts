@@ -1,6 +1,6 @@
 const global = window as any;
 
-const load = (srcPath: string, callback: () => void) : void => {
+const load = (srcPath: string, callback: () => void): void => {
   if (global.monaco) {
     callback();
     return;

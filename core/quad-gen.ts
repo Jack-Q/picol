@@ -1,9 +1,8 @@
 import { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
 import {
-  Quadruple, QuadrupleArg, QuadrupleArgNull, QuadrupleArgQuadRef, QuadrupleArgTableRef,
-  QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
+  Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgNull, QuadrupleArgQuadRef,
+  QuadrupleArgTableRef, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
-import { QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgValue, QuadrupleOperator } from './quadruple';
 import { PrimitiveType } from './token';
 
 const Q_NULL = QuadrupleArgNull.Q_NULL;
