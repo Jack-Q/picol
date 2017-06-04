@@ -9,7 +9,7 @@
       </div>
       <div class="main-stack">
         <ui-tabs type="icon" fullwidth>
-          <ui-tab icon="book">
+          <ui-tab icon="code">
             <div class="src-editor">
               <monaco-editor
                 :code="code"
@@ -24,19 +24,18 @@
               </monaco-editor>
             </div>
           </ui-tab>
-          <ui-tab icon="person">
-              Authors
+          <ui-tab icon="device_hub">
+              <ast-viewer :ast="ast"></ast-viewer>
           </ui-tab>
-          <ui-tab icon="collections_bookmark">
-              My collections
+          <ui-tab icon="list">
+              <quad-viewer :quadList="quadrupleTable"></quad-viewer>
           </ui-tab>
-          <ui-tab icon="favorite">
+          <ui-tab icon="playlist_play">
           </ui-tab>
         </ui-tabs>
       </div>
       <div class="right-aside">
-        <div v-if="ast">{{ ast }}</div>
-        <div>{{quadrupleTable}}</div>
+        <quad-viewer :quadList="quadrupleTable"></quad-viewer>
       </div>
     </div>
   </div>
@@ -71,12 +70,10 @@ export default class Index extends Vue {
   name = 'index'
   code = MonacoTokenizer.picolSample.default
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
-  ast: ParseNode
+  ast: ParseNode|null = null
   quadrupleTable: Quadruple[] = []
 
   editorMounted() {
-    // eslint-disable-next-line
-    console.log(this.name);
     loadLanguage();
   }
 
@@ -131,8 +128,10 @@ export default class Index extends Vue {
     }
 
     try{
-      const quadrupleTable = core.generator(this.ast);
-      this.quadrupleTable = quadrupleTable;
+      if(this.ast){
+        const quadrupleTable = core.generator(this.ast);
+        this.quadrupleTable = quadrupleTable;
+      }
     }catch(e){
 
     }
@@ -183,10 +182,12 @@ export default class Index extends Vue {
   margin: 0;
   padding: 0;
   flex: 1;
+  height: calc(100% - 45px)
 }
 
 .right-aside {
   flex: 1;
+  min-width: 280px;
 }
 
 .src-editor {

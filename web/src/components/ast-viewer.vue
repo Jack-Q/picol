@@ -1,8 +1,11 @@
 <template>
   <div class="root">
-    <svg class="ast">
-
-    </svg>
+    <div v-if="ast">
+      {{ast}}
+    </div>
+    <div v-else class="tip">
+      Load sample files or type in your own program
+    </div>
   </div>
 </template>
 
@@ -14,10 +17,6 @@ import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 })
 export default class AstViewer extends Vue {
   @Prop ast = p({type: Object})
-
-  @Lifecycle mounted() { 
-
-  }
 }
 </script>
 

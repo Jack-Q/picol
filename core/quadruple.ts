@@ -139,11 +139,14 @@ export class Quadruple {
   public argument2: QuadrupleArg;
   public result: QuadrupleArg;
   public comment: string = '';
+
+  public get operatorName() {
+    return QuadrupleOperator[this.operator];
+  }
+
   public toString() {
     const pan = (str: string) => str + ' '.repeat(12).slice(str.length);
-    return `${
-      pan(QuadrupleOperator[this.operator])
-      }\t ${
+    return `${pan(this.operatorName)}\t ${
       pan(this.argument1.toString())
       }\t ${
       pan(this.argument2.toString())

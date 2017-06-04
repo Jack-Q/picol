@@ -26,7 +26,7 @@ int square(int value){
   return value * value;
 }
 
-int main(){
+// int main(){
   // Declaration
   float number := 3.0, result;
 
@@ -50,7 +50,7 @@ int main(){
   } else {
     show('E');
   }
-}
+// }
 `;
 
 const picolSample: {
