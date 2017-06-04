@@ -23,7 +23,7 @@
         </div>
       </div>
       <div class="right-aside">
-        <div>{{ ast || ''}}</div>
+        <div v-if="ast">{{ ast }}</div>
         <div>{{quadrupleTable}}</div>
       </div>
     </div>

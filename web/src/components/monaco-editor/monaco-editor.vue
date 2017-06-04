@@ -107,7 +107,7 @@ export default class MonacoEditor extends Vue {
     this.editor = global.monaco.editor.create(this.$el, this.editorOptions);
     global.editor = this.editor;
     this.editor.onDidChangeModelContent(() => this.codeChangeHandler(this.editor));
-    this.codeChangeHandler(this.editor); // manually trigger initial code 
+    this.codeChangeHandler(this.editor); // manually trigger an initial code update
   }
 
   destroyMonaco() {
