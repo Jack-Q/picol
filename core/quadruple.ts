@@ -27,8 +27,8 @@ export enum QuadrupleOperator {
   V_ASS,
 
   // array assignment
-  A_ASS,
-  A_RET,
+  A_ASS, // array assignment
+  A_RET, // array retrieval
 
   // procedure call
   F_PARA, // prepare argument for procedural call
@@ -36,6 +36,10 @@ export enum QuadrupleOperator {
   F_REV,  // prepare return value
   F_RET,  // function return (control of flow)
   F_VAL,  // bind return value of function to temp
+
+  // heap memory management
+  M_REQ,  // request allocation of heap memory
+  M_FREE, // free heap memory
 }
 
 export enum QuadrupleArgType {

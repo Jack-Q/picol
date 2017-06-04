@@ -3,6 +3,7 @@ import {
   Quadruple, QuadrupleArg, QuadrupleArgNull, QuadrupleArgQuadRef, QuadrupleArgTableRef,
   QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
+import { QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgValue, QuadrupleOperator } from './quadruple';
 import { PrimitiveType } from './token';
 
 const Q_NULL = QuadrupleArgNull.Q_NULL;
@@ -429,7 +430,42 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
 };
 
 const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
+  const ARRAY_ADDR_OFFSET = 0;
+  const ARRAY_DIM_DEF_OFFSET = 1;
 
+  const arrType = node.children[0];
+  const primitiveType = arrType.children[0];
+  const arrDimensionDef = arrType.children[1];
+  const arrayName = node.children[1].value;
+  ctx.addEntry(arrayName); // dimension, type, name
+
+  let size: QuadrupleArg | undefined;
+  arrDimensionDef.children.map((dim, index) => {
+    const dimExpr = generateExpression(ctx, dim);
+    const dimRef = new QuadrupleArgArrayAddr(ctx.getEntry(arrayName),
+      new QuadrupleArgValue(PrimitiveType.INT, index + ARRAY_DIM_DEF_OFFSET));
+    ctx.addQuadruple(QuadrupleOperator.A_ASS, dimExpr.toValue(ctx),
+      Q_NULL, dimRef, 'Set array size of ' + index + ' dimension');
+    if (size) {
+      const temp = ctx.getTempVar();
+      ctx.addQuadruple(QuadrupleOperator.I_MUL, size, dimExpr.toValue(ctx), temp, 'calc array size');
+    } else {
+      size = dimExpr.toValue(ctx);
+    }
+  });
+  if (!size) {
+    throw new GeneratorError('empty array dimension');
+  }
+  const totalSize = ctx.getTempVar();
+  const elementSize = 1; // TODO: get size by element type
+  ctx.addQuadruple(QuadrupleOperator.I_MUL, size, new QuadrupleArgValue(PrimitiveType.INT, elementSize),
+    totalSize, 'calc total size');
+
+  const addrRef = new QuadrupleArgArrayAddr(ctx.getEntry(arrayName),
+    new QuadrupleArgValue(PrimitiveType.INT, ARRAY_ADDR_OFFSET));
+  const heapAddr = ctx.getTempVar();
+  ctx.addQuadruple(QuadrupleOperator.M_REQ, totalSize, Q_NULL, heapAddr, 'request memory allocation');
+  ctx.addQuadruple(QuadrupleOperator.A_ASS, heapAddr, Q_NULL, addrRef, 'save dynamic array address');
   return attr.valid();
 };
 
