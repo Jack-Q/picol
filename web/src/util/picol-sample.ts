@@ -57,7 +57,7 @@ const picolSample: {
   default: string;
   [sampleName: string]: string;
 } = {
-  default: completeSample,
+  default: defaultSample,
   defaultSample,
   completeSample,
 };
