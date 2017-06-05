@@ -9,9 +9,6 @@
       </div>
       <div class="main-stack">
         <ui-tabs type="icon" fullwidth>
-          <ui-tab icon="device_hub">
-              <ast-viewer :ast="ast"></ast-viewer>
-          </ui-tab>
           <ui-tab icon="code">
             <div class="src-editor">
               <monaco-editor
@@ -26,6 +23,9 @@
                 language='Picol'>
               </monaco-editor>
             </div>
+          </ui-tab>
+          <ui-tab icon="device_hub">
+              <ast-viewer :ast="ast"></ast-viewer>
           </ui-tab>
           <ui-tab icon="list">
               <quad-viewer :quadList="quadrupleTable"></quad-viewer>

@@ -61,6 +61,16 @@ const parseExpressionInvoke: ParseFunc = (src, id) => {
   }
   src.adv();
   const node = new ParseNode(ParseNodeType.SEG_INVOKE_ARG_LIST);
+  const emptyArgParen = src.get();
+  if (emptyArgParen !== null && emptyArgParen.type === TokenType.DIM_R_PAREN) {
+    // empty parameter list
+    src.adv();
+    const invocation = new ParseNode(ParseNodeType.EXPR_FUNC_INVOKE);
+    invocation.addChild(id);
+    invocation.addChild(node);
+    return invocation;
+  }
+
   while (true) {
     const exp = parseExpression(src);
     if (exp === null) {
