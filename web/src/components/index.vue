@@ -181,6 +181,7 @@ export default class Index extends Vue {
 }
 .logo-box:hover {
   height: 80px;
+  box-shadow: 0 0 10px 2px #aaa;
 }
 .logo-tip {
   line-height: 35px;
