@@ -21,6 +21,8 @@ const picolLanguage: IPicolMonarchLanguage = {
     'while',
     'true',
     'false',
+    'case',
+    'default',
   ],
   symbols: /\+\+|--|\+=|-=|\+|-|:=|:|>=|>|<=|<|==|!=|!|&&|\|\||\*=|\/=|\*|\//,
   operators: [

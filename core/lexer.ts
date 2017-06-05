@@ -1,13 +1,5 @@
+import { LexerError } from './error';
 import { IPosition, Token, TokenType } from './token';
-
-export class LexerError extends Error {
-  public pos: IPosition;
-  constructor(message: string, pos: IPosition) {
-    super(message);
-    this.name = 'LexerError';
-    this.pos = { ...pos };
-  }
-}
 
 export interface ILexerOption {
   reserveWhiteSpace: boolean;
