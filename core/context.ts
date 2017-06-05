@@ -4,6 +4,12 @@ import {
   QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
 
+/**
+ * Execution context
+ *
+ * An execution context is a block level unit with dedicated table
+ * for definition and attributes of identifiers.
+ */
 class ExecutionContext {
   public parent: ExecutionContext;
   private nameTable: { [name: string]: { name: string } } = {};
@@ -27,11 +33,29 @@ class ExecutionContext {
   }
 }
 
+/**
+ * Generator Context
+ */
 export class GeneratorContext {
-  // the context contains all kinds of
+  /**
+   * Temporary variable counter
+   * Picol use single shared global counter for temporary variable across one compiling unit
+   */
   private tempIndex = 0;
+
+  /**
+   * Execution context stack
+   * When entering a block level unit, an execution context will be created.
+   * When exiting a block level unit, current top execution context will be moved to
+   * historic context storage for further analysis or reference (and may be illustrated).
+   */
   private contextStack: ExecutionContext[] = [];
+
+  /**
+   * The global quadruple list
+   */
   private quadrupleList: Quadruple[] = [];
+
   private breakChain: number[] = [];
   private continueChain: number[] = [];
 
@@ -72,10 +96,19 @@ export class GeneratorContext {
     this.quadrupleList.push(quadruple);
   }
 
+  /**
+   * create new temporary variable
+   */
   public getTempVar() {
     return new QuadrupleArgVarTemp(this.tempIndex++);
   }
 
+  /**
+   * resolve a chain of quadruples with undetermined jump target
+   *
+   * @param head is the index of head of unresolved quadruple chain
+   * @param target is the jump target to be applied to items within this chain
+   */
   public backPatchChain(head: number, target: number) {
     let q = head;
     while (q !== 0) {
@@ -85,8 +118,15 @@ export class GeneratorContext {
     }
   }
 
+  /**
+   * merge two quadruple chains
+   *
+   * @param oHead is the index of head of the chain generated earlier
+   * @param nHead is the index of head of the chain generated later
+   */
   public mergeChain(oHead: number, nHead: number): number {
     if (nHead === 0) {
+      // for an empty chain, no merge action is required
       return oHead;
     }
     let q = nHead;
