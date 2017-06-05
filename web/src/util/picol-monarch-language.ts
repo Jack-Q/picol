@@ -22,8 +22,9 @@ const picolLanguage: IPicolMonarchLanguage = {
     'true',
     'false',
   ],
-  symbols: /[=><!~?:&|+\-*\/\^%]+/,
+  symbols: /\+\+|--|\+=|-=|\+|-|:=|:|>=|>|<=|<|==|!=|!|&&|\|\||\*=|\/=|\*|\//,
   operators: [
+    ':',
     ':=',
     '>',
     '<',
