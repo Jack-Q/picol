@@ -37,10 +37,7 @@
         <ast-node :ast='node.children[0]' />
       </div>
     </div>
-    <div class="node-block">
-      <div class="node-header">Body</div>
-      <ast-node v-for="node in ast.children[3].children" :ast='node'></ast-node>
-    </div>
+    <ast-node v-for="node in ast.children[3].children" :ast='node'></ast-node>
   </div>
   <div v-else-if="nodeType === 'STAT_DECLARATION_PRIM'" class='node-block'>
     <div class="node-header">
@@ -125,6 +122,29 @@
       <ast-node v-for="node in ast.children[2].children" :ast='node'></ast-node>
     </div>
   </div>
+  <div v-else-if="nodeType === 'STAT_SWITCH'" class='node-block'>
+    <div class="node-header">
+      <ui-icon>open_with</ui-icon>
+      switch
+    </div>
+    <div class="node-block">
+      <div class="node-header"><ui-icon>help_outline</ui-icon>Condition</div>
+      <ast-expr :ast='ast.children[0]' />
+    </div>
+    <template v-for="node in ast.children[1].children">
+      <div v-if="getNodeType(node) === 'SEG_CASE_LABEL'" class="node-block expr-inline-node">
+        <div class="node-label"></div>
+        <div class="node-header"><ui-icon>label</ui-icon></div>
+        <ast-expr :ast='node.children[0]' />
+      </div>
+      <div v-else-if="getNodeType(node) === 'SEG_DEFAULT_LABEL'" class="node-block expr-inline-node">
+        <div class="node-label"></div>
+        <div class="node-header"><ui-icon>label_outline</ui-icon></div>
+        Default
+      </div>
+      <ast-node v-else :ast='node'></ast-node>
+    </template>
+  </div>
   <div v-else-if="nodeType === 'STAT_WHILE'" class='node-block'>
     <div class="node-header">
       <ui-icon>loop</ui-icon>
@@ -167,6 +187,13 @@
     </div>
     <ast-expr :ast="ast.children[0]" />
   </div>
+  <div v-else-if="nodeType === 'STAT_RETURN_VOID'" class="node-block">
+    <div class="node-header">
+      <ui-icon>keyboard_return</ui-icon>
+      Return
+    </div>
+    <pre class="type-prim">&lt;void&gt;</pre>
+  </div>
   <div v-else-if="nodeType === 'STAT_BREAK'" class="node-block">
     <div class="node-header">
       <ui-icon>vertical_align_bottom</ui-icon>
@@ -186,7 +213,7 @@
     <pre class="type-prim">Array&lt;{{getPrimType(ast.children[0].value)}}&gt;[{{ast.value}}]</pre>
   </span>
   <div v-else>
-    type: {{nodeType}}
+    type: <pre>{{nodeType}}</pre>
     {{ast}}
   </div>
 </template>
@@ -207,11 +234,7 @@ export default class AstNode extends Vue {
 
   public get nodeType() {
     const ast = this.ast as ParseNode;
-    if(ast && ast.type !== undefined) {
-      return ParseNodeType[ast.type];
-    } else {
-      return "";
-    }
+    return this.getNodeType(ast);
   }
 
   getTokenType(type: TokenType) {
@@ -219,6 +242,13 @@ export default class AstNode extends Vue {
   }
   getPrimType(type: PrimitiveType) {
     return PrimitiveType[type];
+  }
+  getNodeType(ast: ParseNode) {
+    if(ast && ast.type !== undefined) {
+      return ParseNodeType[ast.type];
+    } else {
+      return "";
+    }
   }
 }
 </script>
@@ -230,7 +260,12 @@ export default class AstNode extends Vue {
   font-size: 14px;
   min-height: 55px;
   min-width: 150px;
+  flex: 1;
   transition: all ease 400ms;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
 }
 .node-block:before {
   display: block;
@@ -270,7 +305,18 @@ export default class AstNode extends Vue {
   text-align: center;
   left: 0;
 }
-
+.node-label {
+  display: block;
+  block-size: border-box;
+  left: 0;
+  position: absolute;
+  height: 25px;
+  width: 25px;
+  top: 50%;
+  margin-top: -12.5px;
+  border: solid 12.5px transparent;
+  border-left-color: #dedede;
+}
 .node-block pre.type-prim {
   background: #eaeeff;
 }

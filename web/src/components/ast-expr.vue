@@ -112,10 +112,10 @@ export default class AstExpr extends Vue {
       case ParseOperatorType.BIN_LOG_AND: return ['\u2227', 'and']; // a && b
       case ParseOperatorType.BIN_LOG_OR: return ['\u2228', 'or'];  // a || b (logic or)
       case ParseOperatorType.BIN_ASS_VAL: return ['\u2254', 'assign']; // a := b
-      case ParseOperatorType.BIN_ASS_ADD: return ['+', 'add & ass']; // a += b
-      case ParseOperatorType.BIN_ASS_SUB: return ['-', 'minus & ass']; // a -= b
-      case ParseOperatorType.BIN_ASS_MUL: return ['\u00d7', 'mul & ass']; // a *= b
-      case ParseOperatorType.BIN_ASS_DIV: return ['\u00f7', 'div & ass']; // a /= b
+      case ParseOperatorType.BIN_ASS_ADD: return ['+=', 'add&ass']; // a += b
+      case ParseOperatorType.BIN_ASS_SUB: return ['-=', 'minus&ass']; // a -= b
+      case ParseOperatorType.BIN_ASS_MUL: return ['\u00d7=', 'mul&ass']; // a *= b
+      case ParseOperatorType.BIN_ASS_DIV: return ['\u00f7=', 'div&ass']; // a /= b
     }
     return ['?', ParseOperatorType[type]];
   }
@@ -126,8 +126,6 @@ export default class AstExpr extends Vue {
 <style>
 .expr-node{
   font-size: 14px;
-  display: flex;
-  flex-direction: column;
 }
 .expr-node > div {
   margin-top: auto;
@@ -146,7 +144,8 @@ export default class AstExpr extends Vue {
   left: 0;
 }
 .expr-node pre, .node-block pre{
-  display: inline-block;
+  text-align: center;
+  min-width: 35px;
   font-size: 0.7em;
   padding: 2px;
   margin: 0;
