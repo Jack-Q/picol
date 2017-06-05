@@ -1,5 +1,7 @@
 # Picol
 
+![Picol-Text](./picol-text.png)
+
 ## Picol as Pico-Language
 
 > 1 Pico-L is 10<sup>-12</sup>L, a tiny volume that can hold only a small neuron.

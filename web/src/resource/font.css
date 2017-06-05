@@ -1,4 +1,6 @@
 /* latin-ext */
+@import url('https://fonts.googleapis.com/css?family=Josefin+Slab:100,400');
+
 @font-face {
   font-family: 'Lato';
   font-style: normal;
@@ -36,4 +38,21 @@
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Josefin Slab';
+  font-style: normal;
+  font-weight: 100;
+  src: local('Josefin Slab Thin'), local('JosefinSlab-Thin'), url(josefin-slab-thin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
+}
+/* latin */
+@font-face {
+  font-family: 'Josefin Slab';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Josefin Slab Regular'), local('JosefinSlab-Regular'), url(./josefin-slab.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
 }
