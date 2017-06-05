@@ -72,7 +72,7 @@ export default class QuadViewer extends Vue {
   position: absolute;
   z-index: 1;
   transition: all ease 400ms;
-  background: rgba(235,230,255,0.85);
+  background: rgba(195,180,235,0.85);
   max-width: 100%;
   right: 10px;
   padding-left: 20px;

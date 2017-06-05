@@ -65,6 +65,8 @@ switch(arr[1,2,3]){
 const functionSample = `// Sample file with nested function definition
 int a := 12;
 int b := 24;
+int[10,a,b] arr;
+int[,,,] arrRef := arr;
 
 void main(){
   while(a < b) {

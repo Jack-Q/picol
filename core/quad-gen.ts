@@ -467,6 +467,12 @@ const generateExpression: generateRule<AttrExpr> = (ctx, node) => {
   }
 };
 
+const getItemType = (node: ParseNode) => {
+  if (node.type === ParseNodeType.TYPE_ARRAY) {
+    return;
+  }
+};
+
 const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
   const type: PrimitiveType = node.children[0].value as PrimitiveType;
   const declItems = node.children[1].children.map((i) => {
@@ -492,7 +498,7 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
 const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
 
   const arrType = node.children[0];
-  const primitiveType = arrType.children[0];
+  const primitiveType = arrType.children[0].value as PrimitiveType;
   const arrDimensionDef = arrType.children[1];
   const arrayName = node.children[1].value;
   ctx.addEntry(arrayName); // dimension, type, name
@@ -527,7 +533,48 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
   return attr.valid();
 };
 
+const generateDeclarationArrayRef: generateRule<IAttr> = (ctx, node) => {
+  const type = getItemType(node.children[0]);
+  const declItems = node.children[1].children.map((i) => {
+    const name = i.children[0].value;
+    const ref = ctx.addEntry(name);
+    if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
+      // const defaultValue = getDefaultValue(type);
+      ctx.addQuadruple(QuadrupleOperator.A_ASS,
+        new QuadrupleArgValue(PrimitiveType.INT, 0),
+        Q_NULL,
+        ref,
+        'default initialization',
+      );
+    } else {
+      const value = generateExpression(ctx, i.children[1]);
+      ctx.addQuadruple(QuadrupleOperator.A_ASS, value.toValue(ctx), Q_NULL, ref);
+    }
+  });
+  return attr.valid();
+};
+
 const generateFunction: generateRule<IAttr> = (ctx, node) => {
+  const funcName = node.children[0].value;
+  const returnType = node.children[1];
+  const paramList = node.children[2].children.map((item) => ({
+    name: item.children[1].value,
+    type: getItemType(item.children[0]),
+  }));
+  ctx.addEntry(funcName);
+
+  // jump to skip function quadruples
+  const funcSkipChain = ctx.nextQuadrupleIndex;
+  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0), 'skip function ' + funcName);
+
+  const statementAttr = generateStatementSequence(ctx, node.children[3]);
+
+  // tail return generation (void return)
+  ctx.backPatchChain(statementAttr.chain, ctx.nextQuadrupleIndex);
+  ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL, 'generated return'); // Return generation policy
+
+  // continue normal context
+  ctx.backPatchChain(funcSkipChain, ctx.nextQuadrupleIndex);
 
   return attr.valid();
 };
@@ -722,6 +769,9 @@ const generateStatement: generateRule<AttrStat> = (ctx, node) => {
       break;
     case ParseNodeType.STAT_DECLARATION_ARR:
       generateDeclarationArray(ctx, node);
+      break;
+    case ParseNodeType.STAT_DECLARATION_ARR_REF:
+      generateDeclarationArrayRef(ctx, node);
       break;
     case ParseNodeType.STAT_DECLARATION_PRIM:
       generateDeclarationPrimitive(ctx, node);
