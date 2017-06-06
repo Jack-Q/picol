@@ -334,7 +334,15 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
   const type: PrimitiveType = node.children[0].value as PrimitiveType;
   const declItems = node.children[1].children.map((i) => {
     const name = i.children[0].value;
-    const ref = ctx.addEntry(name);
+
+    const nameStatus = ctx.checkName(name);
+    if (nameStatus.isDefined && nameStatus.currentContext) {
+      throw new GeneratorError('variable is defined ' + name);
+    }
+
+    ctx.addEntry.prim(name, type);
+    const ref = ctx.getEntry(name);
+
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
       ctx.addQuadruple(QuadrupleOperator.A_ASS,
@@ -358,7 +366,13 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
   const primitiveType = arrType.children[0].value as PrimitiveType;
   const arrDimensionDef = arrType.children[1];
   const arrayName = node.children[1].value;
-  ctx.addEntry(arrayName); // dimension, type, name
+
+  const nameStatus = ctx.checkName(arrayName);
+  if (nameStatus.isDefined && nameStatus.currentContext) {
+    throw new GeneratorError('name redefinition:' + name);
+  }
+
+  ctx.addEntry.arr(arrayName, primitiveType, arrDimensionDef.children.length); // dimension, type, name
 
   let size: QuadrupleArg | undefined;
   arrDimensionDef.children.map((dim, index) => {
@@ -391,10 +405,18 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
 };
 
 const generateDeclarationArrayRef: generateRule<IAttr> = (ctx, node) => {
-  const type = getItemType(node.children[0]);
+  const type = node.children[0].children[0].value;
+  const dim = node.children[0].value as number;
   const declItems = node.children[1].children.map((i) => {
     const name = i.children[0].value;
-    const ref = ctx.addEntry(name);
+
+    const nameStatus = ctx.checkName(name);
+    if (nameStatus.isDefined && nameStatus.currentContext) {
+      throw new GeneratorError('variable redefinition');
+    }
+
+    ctx.addEntry.arrRef(name, type, dim);
+    const ref = ctx.getEntry(name);
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
       ctx.addQuadruple(QuadrupleOperator.A_ASS,
@@ -418,7 +440,13 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
     name: item.children[1].value,
     type: getItemType(item.children[0]),
   }));
-  ctx.addEntry(funcName);
+
+  const nameStatus = ctx.checkName(name);
+  if (nameStatus.isDefined && nameStatus.currentContext) {
+    throw new GeneratorError('name redefinition: ' + name);
+  }
+
+  ctx.addEntry.func(funcName);
 
   // jump to skip function quadruples
   const funcSkipChain = ctx.nextQuadrupleIndex;

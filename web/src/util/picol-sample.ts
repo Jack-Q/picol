@@ -69,6 +69,8 @@ int[10,a,b] arr;
 int[,,,] arrRef := arr;
 
 void main(){
+  void show() {}
+
   while(a < b) {
     void func(int a, int b) {
       show(a);
@@ -76,6 +78,8 @@ void main(){
     }
     func(a++, b--);
   }
+
+  int a, b;
 }
 
 main();

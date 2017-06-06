@@ -7,7 +7,7 @@ import { SymbolEntry } from './symbol-entry';
 import { PrimitiveType } from './token';
 
 interface INameStatus {
-  defined: boolean;
+  isDefined: boolean;
   currentContext: boolean;
   entry?: SymbolEntry;
 }
@@ -45,10 +45,10 @@ class ExecutionContext {
 
   public checkName(name: string, current: boolean = true): INameStatus {
     if (this.nameTable[name]) {
-      return { defined: true, currentContext: current, entry: this.nameTable[name] };
+      return { isDefined: true, currentContext: current, entry: this.nameTable[name] };
     }
     if (this.isRoot) {
-      return {defined: false, currentContext: false};
+      return {isDefined: false, currentContext: false};
     }
     return this.parent.checkName(name, false);
   }
@@ -98,7 +98,7 @@ export class GeneratorContext {
     return this.currentContext;
   }
 
-  public get _addEntry() {
+  public get addEntry() {
     return {
       func: (name: string) => this.currentContext.addEntry(SymbolEntry.create.func(name)),
       prim: (name: string, type: PrimitiveType) =>
@@ -110,13 +110,12 @@ export class GeneratorContext {
     };
   }
 
-  public addEntry(name: string): QuadrupleArgTableRef {
-    this._addEntry.func(name);
-    return new QuadrupleArgTableRef(name, 0);
-  }
-
   public getEntry(name: string): QuadrupleArgTableRef {
     return new QuadrupleArgTableRef(this.currentContext.getEntry(name).name, 0);
+  }
+
+  public checkName(name: string): INameStatus {
+    return this.currentContext.checkName(name);
   }
 
   public addQuadruple(op: QuadrupleOperator, arg1: QuadrupleArg, arg2: QuadrupleArg, result: QuadrupleArg,
@@ -212,5 +211,10 @@ export class GeneratorContext {
       throw new GeneratorError('no continue chain, continue statement outside of loop block');
     }
     this.continueChain[len - 1] = this.mergeChain(this.continueChain[len - 1], chain);
+  }
+
+  private __addEntry(name: string): QuadrupleArgTableRef {
+    this.addEntry.func(name);
+    return new QuadrupleArgTableRef(name, 0);
   }
 }
