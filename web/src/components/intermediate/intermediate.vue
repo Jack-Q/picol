@@ -1,5 +1,6 @@
 <template>
-  <div class="root">
+  <div class="intermediate-root">
+    <context-tree :contextTree="contextTree" />
     <quad-viewer :quadList="quadList" />
   </div>
 </template>
@@ -7,13 +8,15 @@
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 import { Quadruple } from '../../../../core/main';
+import ContextTree from './context-tree';
 import QuadViewer from './quad-viewer';
 
 
 @Component({
   name: 'intermediate',
   components: {
-    QuadViewer
+    QuadViewer,
+    ContextTree,
   }
 })
 export default class Intermediate extends Vue {
@@ -23,4 +26,7 @@ export default class Intermediate extends Vue {
 </script>
 
 <style scoped>
+.intermediate-root{
+  display: flex;
+}
 </style>

@@ -28,5 +28,6 @@ const tokenList = Array.from(lexer);
 printToken(tokenList.filter((t) => t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE));
 const ast = Main.parser(tokenList);
 ast.print();
-const quadrupleTable = Main.generator(ast);
-quadrupleTable.map((q, i) => console.log(i + '\t', q.toString()));
+const intermediateContext = Main.generator(ast);
+
+intermediateContext.quadrupleList.map((q, i) => console.log(i + '\t', q.toString()));

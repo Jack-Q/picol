@@ -18,7 +18,7 @@ interface INameStatus {
  * An execution context is a block level unit with dedicated table
  * for definition and attributes of identifiers.
  */
-class ExecutionContext {
+export class ExecutionContext {
   public parent: ExecutionContext | undefined;
   public children: ExecutionContext[] = [];
   private nameTable: { [name: string]: SymbolEntry } = {};
@@ -59,6 +59,17 @@ class ExecutionContext {
     this.children.push(ctx);
   }
 
+  public dump(indent: number = 0): string {
+    const childIndent = indent + 2;
+    const indentStr = ' '.repeat(indent);
+    return [
+      ...Object.getOwnPropertyNames(this.nameTable)
+        .map((n, i) =>
+        `${indentStr}${i}:${n} \t${this.nameTable[n].toString()}`),
+
+      ...this.children.map((c) => c.dump(childIndent)),
+    ].join('\n');
+  }
 }
 
 // global context defines items that is predefined by language

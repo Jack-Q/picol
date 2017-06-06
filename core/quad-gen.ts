@@ -1,4 +1,4 @@
-import { GeneratorContext } from './context';
+import { ExecutionContext, GeneratorContext } from './context';
 import { GeneratorError, ParserError } from './error';
 import { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
 import {
@@ -718,17 +718,21 @@ const generateSource: generateRule<IAttr> = (ctx, node) => {
   return attr.valid();
 };
 
+export interface IntermediateContext {
+  quadrupleList: Quadruple[];
+  contextTree: ExecutionContext;
+}
+
 // generate quadruple based on ast
-export const generator = (ast: ParseNode) => {
+export const generator = (ast: ParseNode): IntermediateContext => {
+  if (ast.type !== ParseNodeType.SRC_SOURCE) {
+    throw new GeneratorError('root of AST for generator must be a source file');
+  }
+  const ctx = new GeneratorContext();
   try {
-    if (ast.type !== ParseNodeType.SRC_SOURCE) {
-      throw new GeneratorError('root of AST for generator must be a source file');
-    }
-    const ctx = new GeneratorContext();
     const result = generateSource(ctx, ast);
-    return ctx.quadrupleTable;
   } catch (e) {
     console.log(e);
   }
-  return [];
+  return { quadrupleList: ctx.quadrupleTable, contextTree: ctx.currentContext };
 };

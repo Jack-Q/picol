@@ -40,7 +40,7 @@
             <ast-viewer :ast="ast"></ast-viewer>
           </ui-tab>
           <ui-tab icon="list">
-            <intermediate :quadList="quadrupleTable" :contextStack="{}" />
+            <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
           </ui-tab>
           <ui-tab icon="playlist_play">
           </ui-tab>
@@ -63,7 +63,7 @@ import AstViewer from './syntax/ast-viewer';
 import Intermediate from './intermediate/intermediate';
 import QuadViewer from './intermediate/quad-viewer';
 
-import core, { Token, TokenType, ParseNode, Quadruple } from '../../../core/main';
+import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext } from '../../../core/main';
 
 const loadLanguage = (): void => {
   const g: any = window;
@@ -86,6 +86,7 @@ export default class Index extends Vue {
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
   ast: ParseNode|null = null
   quadrupleTable: Quadruple[] = []
+  contextTree: ExecutionContext|null = null
 
   editorMounted() {
     loadLanguage();
@@ -143,8 +144,9 @@ export default class Index extends Vue {
 
     try{
       if(this.ast){
-        const quadrupleTable = core.generator(this.ast);
-        this.quadrupleTable = quadrupleTable;
+        const context = core.generator(this.ast);
+        this.contextTree = context.contextTree;
+        this.quadrupleTable = context.quadrupleList;
       }
     }catch(e){
 

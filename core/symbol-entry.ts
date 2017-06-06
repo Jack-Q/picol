@@ -120,6 +120,10 @@ export class SymbolEntry {
   public get asArrRef(): TypeInfoArrayRef {
     return this.info as TypeInfoArrayRef;
   }
+
+  public toString() {
+    return this.name + '\t' + SymbolEntryType[this.type] + ' @' + this.stackOffset;
+  }
 }
 
 export const createValueType = {
