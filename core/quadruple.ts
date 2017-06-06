@@ -102,14 +102,16 @@ export class QuadrupleArgTableRef extends QuadrupleArg {
 }
 
 export class QuadrupleArgQuadRef extends QuadrupleArg {
+  public label: string = '';
   public quadIndex: number;
 
-  constructor(quadIndex: number) {
+  constructor(quadIndex: number, label?: string) {
     super(QuadrupleArgType.QUAD_REF);
     this.quadIndex = quadIndex;
+    this.label = label || '';
   }
 
-  public toString = () => `(${this.quadIndex})`;
+  public toString = () => (this.label ? this.label : '') + `(${this.quadIndex})`;
 }
 
 export class QuadrupleArgVarTemp extends QuadrupleArg {

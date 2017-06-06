@@ -87,14 +87,35 @@ void main(){
 main();
 `;
 
+const stackSample = `// various definitions
+int a, b, c, d;
+bool e, f, g, h;
+char i, j, k, l;
+int[1,2] a_1;
+int[2,3] a_2;
+{
+    int a, b, c, d;
+    int e, f, g, h;
+}
+int funct(){
+    int a, b, c, d;
+    int e, f, g, h;
+    {
+        int a, b, c, d;
+        int e, f, g, h;
+    }
+}
+`;
+
 const picolSample: {
   default: string;
   [sampleName: string]: string;
 } = {
-  default: completeSample,
+  default: stackSample,
   defaultSample,
   completeSample,
   functionSample,
+  stackSample,
 };
 
 export default picolSample;

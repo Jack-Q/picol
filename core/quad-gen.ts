@@ -5,11 +5,11 @@ import {
   Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgNull, QuadrupleArgQuadRef,
   QuadrupleArgTableRef, QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
-import { createValueType, ValueType, ValueTypeInfo } from './symbol-entry';
+import { createValueType, getPrimitiveSize, ValueType, ValueTypeInfo } from './symbol-entry';
 import { PrimitiveType } from './token';
 
 const ARRAY_ADDR_OFFSET = 0;
-const ARRAY_DIM_DEF_OFFSET = 1;
+const ARRAY_DIM_DEF_OFFSET = ARRAY_ADDR_OFFSET + getPrimitiveSize('ref');
 
 const Q_NULL = QuadrupleArgNull.Q_NULL;
 
@@ -380,12 +380,13 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
   }
 
   ctx.addEntry.arr(arrayName, primitiveType, arrDimensionDef.children.length); // dimension, type, name
+  const arrEntryInfo = ctx.getEntryInfo(arrayName).asArr;
 
   let size: QuadrupleArg | undefined;
   arrDimensionDef.children.map((dim, index) => {
     const dimExpr = generateExpression(ctx, dim);
     const dimRef = new QuadrupleArgArrayAddr(ctx.getEntry(arrayName),
-      new QuadrupleArgValue(PrimitiveType.INT, index + ARRAY_DIM_DEF_OFFSET));
+      new QuadrupleArgValue(PrimitiveType.INT, index * getPrimitiveSize(PrimitiveType.INT) + ARRAY_DIM_DEF_OFFSET));
     ctx.addQuadruple(QuadrupleOperator.A_ASS, dimExpr.toValue(ctx),
       Q_NULL, dimRef, 'Set array size of ' + index + ' dimension');
     if (size) {
@@ -399,7 +400,7 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
     throw new GeneratorError('empty array dimension');
   }
   const totalSize = ctx.getTempVar();
-  const elementSize = 1; // TODO: get size by element type
+  const elementSize = arrEntryInfo.elementSize; // TODO: get size by element type
   ctx.addQuadruple(QuadrupleOperator.I_MUL, size, new QuadrupleArgValue(PrimitiveType.INT, elementSize),
     totalSize, 'calc total size');
 
@@ -450,9 +451,23 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
   ctx.addEntry.func(name); // function name is exposed outside of function block
 
   // wrap in function block context
-  ctx.wrapInContext('Function: ' + name, () => {
+  ctx.wrapInContext('Function: ' + name, {
+    isFunction: true,
+  }, () => {
     const functionInfo = ctx.getEntryInfo(name).asFunc;
-    functionInfo.returnType = getItemType(node.children[1]);
+
+    // return value
+    const returnType = getItemType(node.children[1]);
+    functionInfo.returnType = returnType;
+
+    // allocate address for return value, no space allocated for void function
+    if (returnType.type === ValueType.ARRAY_REF) {
+      ctx.addEntry.arrRef('?ret', returnType.primitiveType, returnType.dim);
+    } else if (returnType.type === ValueType.PRIMITIVE) {
+      ctx.addEntry.prim('?ret', returnType.primitiveType);
+    }
+
+    // parameters
     node.children[2].children.map((item) => {
       const parameter = {
         name: item.children[1].value,
@@ -477,6 +492,8 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
     const funcSkipChain = ctx.nextQuadrupleIndex;
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0), 'skip function ' + name);
 
+    // next quadruple is the entry of the function
+    functionInfo.entryAddress = ctx.nextQuadrupleIndex;
     const statementAttr = generateStatementSequence(ctx, node.children[3], false);
 
     // tail return generation (void return)
@@ -717,7 +734,7 @@ const generateStatement: generateRule<AttrStat> = (ctx, node, newContext) => {
 };
 
 const generateSource: generateRule<IAttr> = (ctx, node) => {
-  ctx.wrapInContext('source root', () => {
+  ctx.wrapInContext('source root', {}, () => {
     const result = node.children.reduce((lastChain, s) => {
       ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
       return generateStatement(ctx, s).chain;

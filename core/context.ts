@@ -3,13 +3,17 @@ import {
   Quadruple, QuadrupleArg, QuadrupleArgQuadRef, QuadrupleArgTableRef,
   QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
-import { createValueType, SymbolEntry, ValueType } from './symbol-entry';
+import { createValueType, SymbolEntry, SymbolEntryType, ValueType, ValueTypeInfo } from './symbol-entry';
 import { PrimitiveType } from './token';
 
 interface INameStatus {
   isDefined: boolean;
   currentContext: boolean;
   entry?: SymbolEntry;
+}
+
+interface IContextOption {
+  isFunction?: boolean;
 }
 
 /**
@@ -19,22 +23,36 @@ interface INameStatus {
  * for definition and attributes of identifiers.
  */
 export class ExecutionContext {
+  public isFunction: boolean = false;
   public name: string;
   public parent: ExecutionContext | undefined;
   public children: ExecutionContext[] = [];
+  public stackPointer: number = 0;
   private nameTable: { [name: string]: SymbolEntry } = {};
 
   public get isRoot(): boolean {
     return this.parent === undefined;
   }
 
-  constructor(parent?: ExecutionContext, name?: string) {
+  constructor(parent?: ExecutionContext, name?: string, isFunctionContext: boolean = false) {
     this.parent = parent;
     this.name = name || '';
+    if (isFunctionContext) {
+      this.stackPointer = 0;
+      this.isFunction = true;
+    } else {
+      // for normal context, the stack is based on the original one
+      this.stackPointer = parent ? parent.stackPointer : 0;
+    }
   }
 
   public addEntry(entry: SymbolEntry) {
     this.nameTable[entry.name] = entry;
+    if (entry.type !== SymbolEntryType.FUNCTION) {
+      const typeInfo = entry.info as ValueTypeInfo;
+      entry.stackOffset = this.stackPointer;
+      this.stackPointer += typeInfo.size;
+    }
   }
 
   public getEntry(name: string, recursive: boolean = true): SymbolEntry {
@@ -119,9 +137,9 @@ export class GeneratorContext {
     this.createGlobalContext();
   }
 
-  public pushContext(name: string) {
+  public pushContext(name: string, option: IContextOption = {}) {
     const oldContext = this.currentContext;
-    this.contextStack.push(new ExecutionContext(this.currentContext, name));
+    this.contextStack.push(new ExecutionContext(this.currentContext, name, option.isFunction || false));
     oldContext.addChildContext(this.currentContext);
     return this.currentContext;
   }
@@ -130,8 +148,8 @@ export class GeneratorContext {
     return this.contextStack.pop();
   }
 
-  public wrapInContext(name: string, content: () => void) {
-    const ctx = this.pushContext(name);
+  public wrapInContext(name: string, option: IContextOption, content: () => void) {
+    const ctx = this.pushContext(name, option);
     content();
     const popCtx = this.popContext();
     if (ctx !== popCtx) {
@@ -155,8 +173,12 @@ export class GeneratorContext {
     return this.currentContext.getEntry(name);
   }
 
-  public getEntry(name: string): QuadrupleArgTableRef {
-    return new QuadrupleArgTableRef(this.getEntryInfo(name).name, 0);
+  public getEntry(name: string): QuadrupleArgTableRef | QuadrupleArgQuadRef {
+    const entryInfo = this.getEntryInfo(name);
+    if (entryInfo.type === SymbolEntryType.FUNCTION) {
+      return new QuadrupleArgQuadRef(entryInfo.asFunc.entryAddress, entryInfo.name);
+    }
+    return new QuadrupleArgTableRef(entryInfo.name, entryInfo.stackOffset);
   }
 
   public checkName(name: string): INameStatus {

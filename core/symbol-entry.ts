@@ -48,12 +48,18 @@ class VoidType extends ValueTypeInfo {
     this.isVoid = true;
     this.type = ValueType.VOID;
   }
+  public toString() {
+    return PrimitiveType[this.primitiveType];
+  }
 }
 
 class TypeInfoPrimitive extends ValueTypeInfo {
   constructor(type: PrimitiveType) {
     super(type);
     this.type = ValueType.PRIMITIVE;
+  }
+  public toString() {
+    return PrimitiveType[this.primitiveType];
   }
 }
 
@@ -66,10 +72,17 @@ class TypeInfoArray extends ValueTypeInfo {
   }
   get size() {
     // stack consumption: [ref-to-heap][dim-1][dim-2][dim-n]
+    // the size of each dimension is stored as int
     return getPrimitiveSize('ref') + getPrimitiveSize(PrimitiveType.INT) * this.dimension;
   }
+
   get elementSize() {
     return getPrimitiveSize(this.primitiveType);
+  }
+
+  public toString() {
+    return '<' + PrimitiveType[this.primitiveType] + '>[' +
+      ','.repeat(this.dimension - 1 < 0 ? 0 : this.dimension - 1) + ']';
   }
 }
 
@@ -83,6 +96,9 @@ class TypeInfoArrayRef extends ValueTypeInfo {
   get size() {
     return getPrimitiveSize('ref');
   }
+  public toString() {
+    return 'Ref[<' + PrimitiveType[this.primitiveType] + '>]';
+  }
 }
 
 interface IFunctionParameter {
@@ -94,6 +110,9 @@ class TypeInfoFunction extends SymbolEntryInfo {
   public returnType: ValueTypeInfo;
   public parameterList: IFunctionParameter[] = [];
   public entryAddress: number;
+  public toString() {
+    return '(' + this.parameterList.map((p) => p.type.toString()).join(',') + ')=>' + this.returnType.toString();
+  }
 }
 
 export class SymbolEntry {
@@ -132,7 +151,8 @@ export class SymbolEntry {
   }
 
   public toString() {
-    return this.name + '\t' + SymbolEntryType[this.type] + ' @' + this.stackOffset;
+    return this.name + '\t' + SymbolEntryType[this.type] + ' '
+      + this.info.toString() + ' @' + this.stackOffset;
   }
 }
 
