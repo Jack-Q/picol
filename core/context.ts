@@ -3,6 +3,7 @@ import {
   Quadruple, QuadrupleArg, QuadrupleArgQuadRef, QuadrupleArgTableRef,
   QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
+import { PrimitiveType } from './token';
 
 /**
  * Execution context
@@ -31,6 +32,7 @@ class ExecutionContext {
     }
     return this.isRoot ? '' : this.parent.getEntry(name);
   }
+
 }
 
 /**
