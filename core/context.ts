@@ -19,6 +19,7 @@ interface INameStatus {
  * for definition and attributes of identifiers.
  */
 export class ExecutionContext {
+  public name: string;
   public parent: ExecutionContext | undefined;
   public children: ExecutionContext[] = [];
   private nameTable: { [name: string]: SymbolEntry } = {};
@@ -27,8 +28,9 @@ export class ExecutionContext {
     return this.parent === undefined;
   }
 
-  constructor(parent?: ExecutionContext) {
+  constructor(parent?: ExecutionContext, name?: string) {
     this.parent = parent;
+    this.name = name || '';
   }
 
   public addEntry(entry: SymbolEntry) {
@@ -63,7 +65,10 @@ export class ExecutionContext {
     const childIndent = indent + 2;
     const indentStr = ' '.repeat(indent);
     return [
+      `${indentStr}Context: ` + (this.name || '(unnamed)') ,
+
       ...Object.getOwnPropertyNames(this.nameTable)
+        .filter((n) => n !== '__ob__') // vue may attach an hidden object here
         .map((n, i) =>
         `${indentStr}${i}:${n} \t${this.nameTable[n].toString()}`),
 
