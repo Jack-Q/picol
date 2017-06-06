@@ -1,10 +1,11 @@
 import { GeneratorContext } from './context';
-import { GeneratorError } from './error';
+import { GeneratorError, ParserError } from './error';
 import { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
 import {
   Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgNull, QuadrupleArgQuadRef,
   QuadrupleArgTableRef, QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
+import { createValueType, ValueType } from './symbol-entry';
 import { PrimitiveType } from './token';
 
 const ARRAY_ADDR_OFFSET = 0;
@@ -324,10 +325,16 @@ const generateExpression: generateRule<AttrExpr> = (ctx, node) => {
   }
 };
 
-const getItemType = (node: ParseNode) => {
-  if (node.type === ParseNodeType.TYPE_ARRAY) {
-    return;
+const getItemType = (node: ParseNode): ValueType => {
+  switch (node.type) {
+    case ParseNodeType.TYPE_ARRAY:
+      return createValueType.arr(node.children[0].children[0].value, node.children[0].children[1].children.length);
+    case ParseNodeType.TYPE_ARRAY_REF:
+      return createValueType.arrRef(node.children[0].value, node.value);
+    case ParseNodeType.TYPE_PRIMITIVE:
+      return createValueType.prim(node.value);
   }
+  return createValueType.void();
 };
 
 const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
@@ -434,32 +441,45 @@ const generateDeclarationArrayRef: generateRule<IAttr> = (ctx, node) => {
 };
 
 const generateFunction: generateRule<IAttr> = (ctx, node) => {
-  const funcName = node.children[0].value;
-  const returnType = node.children[1];
-  const paramList = node.children[2].children.map((item) => ({
-    name: item.children[1].value,
-    type: getItemType(item.children[0]),
-  }));
+  const name = node.children[0].value;
 
   const nameStatus = ctx.checkName(name);
   if (nameStatus.isDefined && nameStatus.currentContext) {
     throw new GeneratorError('name redefinition: ' + name);
   }
+  ctx.addEntry.func(name); // function name is exposed outside of function block
 
-  ctx.addEntry.func(funcName);
+  // wrap in function block context
+  ctx.wrapInContext(() => {
+    const functionInfo = ctx.getEntryInfo(name).asFunc;
+    functionInfo.returnType = getItemType(node.children[1]);
+    node.children[2].children.map((item) => {
+      const parameter = {
+        name: item.children[1].value,
+        type: getItemType(item.children[0]),
+      };
 
-  // jump to skip function quadruples
-  const funcSkipChain = ctx.nextQuadrupleIndex;
-  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0), 'skip function ' + funcName);
+      if (functionInfo.parameterList.some((p) => p.name === parameter.name)) {
+        // name conflict
+        throw new GeneratorError('parameter with same name already defined');
+      } else {
+        functionInfo.parameterList.push(parameter);
+      }
+    });
 
-  const statementAttr = generateStatementSequence(ctx, node.children[3]);
+    // jump to skip function quadruples
+    const funcSkipChain = ctx.nextQuadrupleIndex;
+    ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0), 'skip function ' + name);
 
-  // tail return generation (void return)
-  ctx.backPatchChain(statementAttr.chain, ctx.nextQuadrupleIndex);
-  ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL, 'generated return'); // Return generation policy
+    const statementAttr = generateStatementSequence(ctx, node.children[3]);
 
-  // continue normal context
-  ctx.backPatchChain(funcSkipChain, ctx.nextQuadrupleIndex);
+    // tail return generation (void return)
+    ctx.backPatchChain(statementAttr.chain, ctx.nextQuadrupleIndex);
+    ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL, 'generated return'); // Return generation policy
+
+    // continue normal context
+    ctx.backPatchChain(funcSkipChain, ctx.nextQuadrupleIndex);
+  });
 
   return attr.valid();
 };
@@ -468,7 +488,11 @@ const generateStatementIf: generateRule<AttrStat> = (ctx, node) => {
   const condition = generateExpression(ctx, node.children[0]);
   condition.toBoolean(ctx);
   ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
+
+  ctx.pushContext();
   const body = generateStatement(ctx, node.children[1]);
+  ctx.popContext();
+
   const chain = ctx.mergeChain(condition.falseChain, body.chain);
   return new AttrStat(chain);
 };
@@ -477,31 +501,36 @@ const generateStatementIfElse: generateRule<AttrStat> = (ctx, node) => {
   const condition = generateExpression(ctx, node.children[0]);
   condition.toBoolean(ctx);
 
+  ctx.pushContext();
   ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
   const bodyThen = generateStatement(ctx, node.children[1]);
-
   const jumpChain = ctx.nextQuadrupleIndex;
   ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
     'end of if-then block');
   bodyThen.chain = ctx.mergeChain(bodyThen.chain, jumpChain);
+  ctx.popContext();
 
+  ctx.pushContext();
   ctx.backPatchChain(condition.falseChain, ctx.nextQuadrupleIndex); // condition satisfied
   const bodyElse = generateStatement(ctx, node.children[2]);
+  ctx.popContext();
 
   const chain = ctx.mergeChain(bodyThen.chain, bodyElse.chain);
   return new AttrStat(chain);
 };
 
 const generateStatementSequence: generateRule<AttrStat> = (ctx, node) => {
-  // TODO: new execution context
+  ctx.pushContext();
   const chain = node.children.reduce((lastChain, stat) => {
     ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
     return generateStatement(ctx, stat).chain;
   }, 0);
+  ctx.popContext();
   return new AttrStat(chain);
 };
 
 const generateStatementWhile: generateRule<AttrStat> = (ctx, node) => {
+  ctx.pushContext();
   // while statement can embrace break and continue
   ctx.pushBreakChain(0);
   ctx.pushContinueChain(0);
@@ -525,10 +554,12 @@ const generateStatementWhile: generateRule<AttrStat> = (ctx, node) => {
   ctx.backPatchChain(continueChain, beginNxq);
   const exitChain = ctx.mergeChain(condition.falseChain, breakChain);
 
+  ctx.popContext();
   return new AttrStat(exitChain);
 };
 
 const generateStatementDo: generateRule<AttrStat> = (ctx, node) => {
+  ctx.pushContext();
   // do statement can embrace break and continue
   ctx.pushBreakChain(0);
   ctx.pushContinueChain(0);
@@ -547,10 +578,12 @@ const generateStatementDo: generateRule<AttrStat> = (ctx, node) => {
   ctx.backPatchChain(continueChain, conditionQuad);
   const exitChain = ctx.mergeChain(breakChain, condition.falseChain);
 
+  ctx.popContext();
   return new AttrStat(exitChain);
 };
 
 const generateStatementSwitch: generateRule<AttrStat> = (ctx, node) => {
+  ctx.pushContext();
   ctx.pushBreakChain(0);
 
   const exprAttr = generateExpression(ctx, node.children[0]).toValue(ctx);
@@ -575,6 +608,7 @@ const generateStatementSwitch: generateRule<AttrStat> = (ctx, node) => {
     return generateStatement(ctx, stat).chain;
   }, 0);
   ctx.backPatchChain(lastStatChain, ctx.nextQuadrupleIndex);
+  ctx.popContext(); // labels are excluded from current context
 
   const blockChain = ctx.nextQuadrupleIndex;
   ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
@@ -670,17 +704,17 @@ const generateStatement: generateRule<AttrStat> = (ctx, node) => {
 };
 
 const generateSource: generateRule<IAttr> = (ctx, node) => {
-  const rootContext = ctx.pushContext();
-  const result = node.children.reduce((lastChain, s) => {
-    ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
-    return generateStatement(ctx, s).chain;
-  }, 0);
+  ctx.wrapInContext(() => {
+    const result = node.children.reduce((lastChain, s) => {
+      ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
+      return generateStatement(ctx, s).chain;
+    }, 0);
 
-  // the end of the source is an infinite loop
-  ctx.backPatchChain(result, ctx.nextQuadrupleIndex);
-  ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL,
-    new QuadrupleArgValue(PrimitiveType.INT, ctx.nextQuadrupleIndex), 'loop forever');
-
+    // the end of the source is an infinite loop
+    ctx.backPatchChain(result, ctx.nextQuadrupleIndex);
+    ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL,
+      new QuadrupleArgValue(PrimitiveType.INT, ctx.nextQuadrupleIndex), 'loop forever');
+  });
   return attr.valid();
 };
 

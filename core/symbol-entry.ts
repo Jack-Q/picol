@@ -22,10 +22,9 @@ export const getPrimitiveSize = (type: PrimitiveType | 'ref'): number => {
 class SymbolEntryInfo {
 }
 
-class ValueType extends SymbolEntryInfo {
+export class ValueType extends SymbolEntryInfo {
   public isVoid: boolean;
   public primitiveType: PrimitiveType;
-  public stackOffset: number;
 
   constructor(type: PrimitiveType) {
     super();
@@ -37,7 +36,11 @@ class ValueType extends SymbolEntryInfo {
   }
 }
 
-class VoidType extends SymbolEntryInfo {
+class VoidType extends ValueType {
+  constructor() {
+    super(PrimitiveType.VOID);
+    this.isVoid = true;
+  }
 }
 
 class TypeInfoPrimitive extends ValueType {
@@ -95,6 +98,7 @@ export class SymbolEntry {
   };
 
   public name: string;
+  public stackOffset: number = -1;
   public type: SymbolEntryType;
   public info: SymbolEntryInfo;
 
@@ -117,3 +121,10 @@ export class SymbolEntry {
     return this.info as TypeInfoArrayRef;
   }
 }
+
+export const createValueType = {
+  void: () => new VoidType(),
+  prim: (type: PrimitiveType) => new TypeInfoPrimitive(type),
+  arr: (type: PrimitiveType, dim: number) => new TypeInfoArray(type, dim),
+  arrRef: (type: PrimitiveType, dim: number) => new TypeInfoArrayRef(type, dim),
+};

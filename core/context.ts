@@ -19,13 +19,15 @@ interface INameStatus {
  * for definition and attributes of identifiers.
  */
 class ExecutionContext {
-  public parent: ExecutionContext;
+  public parent: ExecutionContext | undefined;
+  public children: ExecutionContext[] = [];
   private nameTable: { [name: string]: SymbolEntry } = {};
+
   public get isRoot(): boolean {
     return this.parent === undefined;
   }
 
-  constructor(parent: ExecutionContext) {
+  constructor(parent?: ExecutionContext) {
     this.parent = parent;
   }
 
@@ -37,7 +39,7 @@ class ExecutionContext {
     if (this.nameTable[name]) {
       return this.nameTable[name];
     }
-    if (recursive && !this.isRoot) {
+    if (recursive && this.parent) {
       return this.parent.getEntry(name, recursive);
     }
     throw new GeneratorError('no symbol defined with name ' + name);
@@ -47,13 +49,26 @@ class ExecutionContext {
     if (this.nameTable[name]) {
       return { isDefined: true, currentContext: current, entry: this.nameTable[name] };
     }
-    if (this.isRoot) {
+    if (!this.parent) {
       return {isDefined: false, currentContext: false};
     }
     return this.parent.checkName(name, false);
   }
 
+  public addChildContext(ctx: ExecutionContext) {
+    this.children.push(ctx);
+  }
+
 }
+
+// global context defines items that is predefined by language
+const createGlobalContext = (): ExecutionContext => {
+  const global = new ExecutionContext();
+
+  // global function
+
+  return global;
+};
 
 /**
  * Generator Context
@@ -93,9 +108,28 @@ export class GeneratorContext {
     return this.quadrupleList.length;
   }
 
+  public constructor() {
+    this.contextStack.push(createGlobalContext());
+  }
+
   public pushContext() {
+    const oldContext = this.currentContext;
     this.contextStack.push(new ExecutionContext(this.currentContext));
+    oldContext.addChildContext(this.currentContext);
     return this.currentContext;
+  }
+
+  public popContext() {
+    return this.contextStack.pop();
+  }
+
+  public wrapInContext(content: () => void) {
+    const ctx = this.pushContext();
+    content();
+    const popCtx = this.popContext();
+    if (ctx !== popCtx) {
+      throw new GeneratorError('inconsistent context state');
+    }
   }
 
   public get addEntry() {
@@ -110,8 +144,12 @@ export class GeneratorContext {
     };
   }
 
+  public getEntryInfo(name: string): SymbolEntry {
+    return this.currentContext.getEntry(name);
+  }
+
   public getEntry(name: string): QuadrupleArgTableRef {
-    return new QuadrupleArgTableRef(this.currentContext.getEntry(name).name, 0);
+    return new QuadrupleArgTableRef(this.getEntryInfo(name).name, 0);
   }
 
   public checkName(name: string): INameStatus {
@@ -213,8 +251,4 @@ export class GeneratorContext {
     this.continueChain[len - 1] = this.mergeChain(this.continueChain[len - 1], chain);
   }
 
-  private __addEntry(name: string): QuadrupleArgTableRef {
-    this.addEntry.func(name);
-    return new QuadrupleArgTableRef(name, 0);
-  }
 }
