@@ -3,7 +3,14 @@ import {
   Quadruple, QuadrupleArg, QuadrupleArgQuadRef, QuadrupleArgTableRef,
   QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
+import { SymbolEntry } from './symbol-entry';
 import { PrimitiveType } from './token';
+
+interface INameStatus {
+  defined: boolean;
+  currentContext: boolean;
+  entry?: SymbolEntry;
+}
 
 /**
  * Execution context
@@ -13,7 +20,7 @@ import { PrimitiveType } from './token';
  */
 class ExecutionContext {
   public parent: ExecutionContext;
-  private nameTable: { [name: string]: { name: string } } = {};
+  private nameTable: { [name: string]: SymbolEntry } = {};
   public get isRoot(): boolean {
     return this.parent === undefined;
   }
@@ -22,15 +29,28 @@ class ExecutionContext {
     this.parent = parent;
   }
 
-  public addEntry(name: string) {
-    this.nameTable[name] = { name };
+  public addEntry(entry: SymbolEntry) {
+    this.nameTable[entry.name] = entry;
   }
 
-  public getEntry(name: string, recursive: boolean = true): string {
+  public getEntry(name: string, recursive: boolean = true): SymbolEntry {
     if (this.nameTable[name]) {
-      return this.nameTable[name].name;
+      return this.nameTable[name];
     }
-    return this.isRoot ? '' : this.parent.getEntry(name);
+    if (recursive && !this.isRoot) {
+      return this.parent.getEntry(name, recursive);
+    }
+    throw new GeneratorError('no symbol defined with name ' + name);
+  }
+
+  public checkName(name: string, current: boolean = true): INameStatus {
+    if (this.nameTable[name]) {
+      return { defined: true, currentContext: current, entry: this.nameTable[name] };
+    }
+    if (this.isRoot) {
+      return {defined: false, currentContext: false};
+    }
+    return this.parent.checkName(name, false);
   }
 
 }
@@ -78,13 +98,25 @@ export class GeneratorContext {
     return this.currentContext;
   }
 
+  public get _addEntry() {
+    return {
+      func: (name: string) => this.currentContext.addEntry(SymbolEntry.create.func(name)),
+      prim: (name: string, type: PrimitiveType) =>
+        this.currentContext.addEntry(SymbolEntry.create.prim(name, type)),
+      arr: (name: string, type: PrimitiveType, dim: number) =>
+        this.currentContext.addEntry(SymbolEntry.create.arr(name, type, dim)),
+      arrRef: (name: string, type: PrimitiveType, dim: number) =>
+        this.currentContext.addEntry(SymbolEntry.create.arrRef(name, type, dim)),
+    };
+  }
+
   public addEntry(name: string): QuadrupleArgTableRef {
-    this.currentContext.addEntry(name);
+    this._addEntry.func(name);
     return new QuadrupleArgTableRef(name, 0);
   }
 
   public getEntry(name: string): QuadrupleArgTableRef {
-    return new QuadrupleArgTableRef(this.currentContext.getEntry(name), 0);
+    return new QuadrupleArgTableRef(this.currentContext.getEntry(name).name, 0);
   }
 
   public addQuadruple(op: QuadrupleOperator, arg1: QuadrupleArg, arg2: QuadrupleArg, result: QuadrupleArg,

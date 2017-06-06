@@ -658,10 +658,15 @@ const generateSource: generateRule<IAttr> = (ctx, node) => {
 
 // generate quadruple based on ast
 export const generator = (ast: ParseNode) => {
-  if (ast.type !== ParseNodeType.SRC_SOURCE) {
-    throw new GeneratorError('root of AST for generator must be a source file');
+  try {
+    if (ast.type !== ParseNodeType.SRC_SOURCE) {
+      throw new GeneratorError('root of AST for generator must be a source file');
+    }
+    const ctx = new GeneratorContext();
+    const result = generateSource(ctx, ast);
+    return ctx.quadrupleTable;
+  } catch (e) {
+    console.log(e);
   }
-  const ctx = new GeneratorContext();
-  const result = generateSource(ctx, ast);
-  return ctx.quadrupleTable;
+  return [];
 };
