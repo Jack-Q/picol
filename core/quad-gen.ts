@@ -743,7 +743,7 @@ const generateSource: generateRule<IAttr> = (ctx, node) => {
     // the end of the source is an infinite loop
     ctx.backPatchChain(result, ctx.nextQuadrupleIndex);
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL,
-      new QuadrupleArgValue(PrimitiveType.INT, ctx.nextQuadrupleIndex), 'loop forever');
+      new QuadrupleArgQuadRef(ctx.nextQuadrupleIndex, 'end'), 'loop forever');
   });
   return attr.valid();
 };
