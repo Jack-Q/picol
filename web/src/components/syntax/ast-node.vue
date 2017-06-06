@@ -220,7 +220,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import { ParseNode, ParseNodeType, TokenType, PrimitiveType } from '../../../core/main';
+import { ParseNode, ParseNodeType, TokenType, PrimitiveType } from '../../../../core/main';
 import AstExpr from './ast-expr';
 
 @Component({

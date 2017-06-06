@@ -66,7 +66,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import { ParseNode, ParseNodeType, TokenType, PrimitiveType, ParseOperatorType } from '../../../core/main';
+import { ParseNode, ParseNodeType, TokenType, PrimitiveType, ParseOperatorType } from '../../../../core/main';
 
 @Component({
   name: 'ast-expr'

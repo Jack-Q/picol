@@ -18,7 +18,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import { Quadruple } from '../../../core/main';
+import { Quadruple } from '../../../../core/main';
 
 @Component({
   name: 'quad-viewer'

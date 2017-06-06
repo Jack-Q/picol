@@ -37,10 +37,10 @@
             </div>
           </ui-tab>
           <ui-tab icon="device_hub">
-              <ast-viewer :ast="ast"></ast-viewer>
+            <ast-viewer :ast="ast"></ast-viewer>
           </ui-tab>
           <ui-tab icon="list">
-              <quad-viewer :quadList="quadrupleTable"></quad-viewer>
+            <intermediate :quadList="quadrupleTable" :contextStack="{}" />
           </ui-tab>
           <ui-tab icon="playlist_play">
           </ui-tab>
@@ -59,8 +59,9 @@ import { Component, Vue } from 'av-ts';
 import MonacoTokenizer from '../util/monaco-tokenizer';
 import MonacoEditor from './monaco-editor/monaco-editor';
 
-import AstViewer from './ast-viewer';
-import QuadViewer from './quad-viewer';
+import AstViewer from './syntax/ast-viewer';
+import Intermediate from './intermediate/intermediate';
+import QuadViewer from './intermediate/quad-viewer';
 
 import core, { Token, TokenType, ParseNode, Quadruple } from '../../../core/main';
 
@@ -77,6 +78,7 @@ const loadLanguage = (): void => {
     MonacoEditor,
     AstViewer,
     QuadViewer,
+    Intermediate,
   },
 })
 export default class Index extends Vue {
