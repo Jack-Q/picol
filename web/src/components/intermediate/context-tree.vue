@@ -1,9 +1,6 @@
 <template>
   <div class="root" v-if="contextTree">
-    <pre>
-
-    {{contextTree.dump()}}
-    </pre>
+    <pre>{{contextTree.dump()}}</pre>
   </div>
   <div v-else>
     No context
@@ -28,11 +25,12 @@ export default class ContextTree extends Vue {
 <style scoped>
   .root{
     flex: 1;
-    width: 50%;
   }
   pre{
     overflow-x: auto;
     height: 100%;
     width: 100%;
+    margin: 0;
+    font-size: 12px;
   }
 </style>

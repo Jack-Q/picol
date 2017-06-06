@@ -28,5 +28,7 @@ export default class Intermediate extends Vue {
 <style scoped>
 .intermediate-root{
   display: flex;
+  height: 100%;
+  align-items: stretch;
 }
 </style>

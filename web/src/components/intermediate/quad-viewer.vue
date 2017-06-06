@@ -48,6 +48,10 @@ export default class QuadViewer extends Vue {
 </script>
 
 <style scoped>
+.root {
+  flex: 0;
+  min-width: 280px;
+}
 .list {
   overflow-x: hidden;
   overflow-y: auto;

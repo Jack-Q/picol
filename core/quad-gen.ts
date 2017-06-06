@@ -5,7 +5,7 @@ import {
   Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgNull, QuadrupleArgQuadRef,
   QuadrupleArgTableRef, QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
-import { createValueType, ValueType } from './symbol-entry';
+import { createValueType, ValueType, ValueTypeInfo } from './symbol-entry';
 import { PrimitiveType } from './token';
 
 const ARRAY_ADDR_OFFSET = 0;
@@ -122,7 +122,7 @@ const attr = {
   valid: (): IAttr => ({ isValid: true }),
 };
 
-type generateRule<T extends IAttr> = (ctx: GeneratorContext, node: ParseNode) => T;
+type generateRule<T extends IAttr> = (ctx: GeneratorContext, node: ParseNode, newContext?: boolean) => T;
 
 const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   // boolean operand
@@ -325,7 +325,7 @@ const generateExpression: generateRule<AttrExpr> = (ctx, node) => {
   }
 };
 
-const getItemType = (node: ParseNode): ValueType => {
+const getItemType = (node: ParseNode): ValueTypeInfo => {
   switch (node.type) {
     case ParseNodeType.TYPE_ARRAY:
       return createValueType.arr(node.children[0].children[0].value, node.children[0].children[1].children.length);
@@ -450,7 +450,7 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
   ctx.addEntry.func(name); // function name is exposed outside of function block
 
   // wrap in function block context
-  ctx.wrapInContext(() => {
+  ctx.wrapInContext('Function: ' + name, () => {
     const functionInfo = ctx.getEntryInfo(name).asFunc;
     functionInfo.returnType = getItemType(node.children[1]);
     node.children[2].children.map((item) => {
@@ -463,6 +463,12 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
         // name conflict
         throw new GeneratorError('parameter with same name already defined');
       } else {
+        // add argument to function block
+        if (parameter.type.type === ValueType.ARRAY_REF) {
+          ctx.addEntry.arrRef(parameter.name, parameter.type.primitiveType, parameter.type.dim);
+        } else if (parameter.type.type === ValueType.PRIMITIVE) {
+          ctx.addEntry.prim(parameter.name, parameter.type.primitiveType);
+        }
         functionInfo.parameterList.push(parameter);
       }
     });
@@ -471,7 +477,7 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
     const funcSkipChain = ctx.nextQuadrupleIndex;
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0), 'skip function ' + name);
 
-    const statementAttr = generateStatementSequence(ctx, node.children[3]);
+    const statementAttr = generateStatementSequence(ctx, node.children[3], false);
 
     // tail return generation (void return)
     ctx.backPatchChain(statementAttr.chain, ctx.nextQuadrupleIndex);
@@ -489,8 +495,8 @@ const generateStatementIf: generateRule<AttrStat> = (ctx, node) => {
   condition.toBoolean(ctx);
   ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
 
-  ctx.pushContext();
-  const body = generateStatement(ctx, node.children[1]);
+  ctx.pushContext('if-then block');
+  const body = generateStatement(ctx, node.children[1], false);
   ctx.popContext();
 
   const chain = ctx.mergeChain(condition.falseChain, body.chain);
@@ -501,36 +507,43 @@ const generateStatementIfElse: generateRule<AttrStat> = (ctx, node) => {
   const condition = generateExpression(ctx, node.children[0]);
   condition.toBoolean(ctx);
 
-  ctx.pushContext();
+  ctx.pushContext('if-then-else block: then');
   ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
-  const bodyThen = generateStatement(ctx, node.children[1]);
+  const bodyThen = generateStatement(ctx, node.children[1], false);
   const jumpChain = ctx.nextQuadrupleIndex;
   ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
     'end of if-then block');
   bodyThen.chain = ctx.mergeChain(bodyThen.chain, jumpChain);
   ctx.popContext();
 
-  ctx.pushContext();
+  ctx.pushContext('if-then-else block else');
   ctx.backPatchChain(condition.falseChain, ctx.nextQuadrupleIndex); // condition satisfied
-  const bodyElse = generateStatement(ctx, node.children[2]);
+  const bodyElse = generateStatement(ctx, node.children[2], false);
   ctx.popContext();
 
   const chain = ctx.mergeChain(bodyThen.chain, bodyElse.chain);
   return new AttrStat(chain);
 };
 
-const generateStatementSequence: generateRule<AttrStat> = (ctx, node) => {
-  ctx.pushContext();
+const generateStatementSequence: generateRule<AttrStat> = (ctx, node, newContext = true) => {
+  // use an boolean indicator to check denote whether an new execution context will be generated
+  // when processing this code sequence
+  // For if/while/do/func etc, a new execution context is already generated before entering this block
+  if (newContext !== false) {
+    ctx.pushContext('block');
+  }
   const chain = node.children.reduce((lastChain, stat) => {
     ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
     return generateStatement(ctx, stat).chain;
   }, 0);
-  ctx.popContext();
+  if (newContext !== false) {
+    ctx.popContext();
+  }
   return new AttrStat(chain);
 };
 
 const generateStatementWhile: generateRule<AttrStat> = (ctx, node) => {
-  ctx.pushContext();
+  ctx.pushContext('while loop');
   // while statement can embrace break and continue
   ctx.pushBreakChain(0);
   ctx.pushContinueChain(0);
@@ -539,7 +552,7 @@ const generateStatementWhile: generateRule<AttrStat> = (ctx, node) => {
   const condition = generateExpression(ctx, node.children[0]);
   condition.toBoolean(ctx);
   ctx.backPatchChain(condition.trueChain, ctx.nextQuadrupleIndex); // condition satisfied
-  const body = generateStatement(ctx, node.children[1]);
+  const body = generateStatement(ctx, node.children[1], false);
 
   const jumpChain = ctx.nextQuadrupleIndex;
   ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
@@ -559,7 +572,7 @@ const generateStatementWhile: generateRule<AttrStat> = (ctx, node) => {
 };
 
 const generateStatementDo: generateRule<AttrStat> = (ctx, node) => {
-  ctx.pushContext();
+  ctx.pushContext('do loop');
   // do statement can embrace break and continue
   ctx.pushBreakChain(0);
   ctx.pushContinueChain(0);
@@ -583,7 +596,7 @@ const generateStatementDo: generateRule<AttrStat> = (ctx, node) => {
 };
 
 const generateStatementSwitch: generateRule<AttrStat> = (ctx, node) => {
-  ctx.pushContext();
+  ctx.pushContext('switch block');
   ctx.pushBreakChain(0);
 
   const exprAttr = generateExpression(ctx, node.children[0]).toValue(ctx);
@@ -655,14 +668,14 @@ const generateStatementContinue: generateRule<IAttr> = (ctx, node) => {
   return attr.valid();
 };
 
-const generateStatement: generateRule<AttrStat> = (ctx, node) => {
+const generateStatement: generateRule<AttrStat> = (ctx, node, newContext) => {
   switch (node.type) {
     case ParseNodeType.STAT_IF:
       return generateStatementIf(ctx, node);
     case ParseNodeType.STAT_IF_ELSE:
       return generateStatementIfElse(ctx, node);
     case ParseNodeType.STAT_SEQUENCE:
-      return generateStatementSequence(ctx, node);
+      return generateStatementSequence(ctx, node, newContext);
     case ParseNodeType.STAT_WHILE:
       return generateStatementWhile(ctx, node);
     case ParseNodeType.STAT_DO:
@@ -704,7 +717,7 @@ const generateStatement: generateRule<AttrStat> = (ctx, node) => {
 };
 
 const generateSource: generateRule<IAttr> = (ctx, node) => {
-  ctx.wrapInContext(() => {
+  ctx.wrapInContext('source root', () => {
     const result = node.children.reduce((lastChain, s) => {
       ctx.backPatchChain(lastChain, ctx.nextQuadrupleIndex);
       return generateStatement(ctx, s).chain;

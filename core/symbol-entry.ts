@@ -22,8 +22,14 @@ export const getPrimitiveSize = (type: PrimitiveType | 'ref'): number => {
 class SymbolEntryInfo {
 }
 
-export class ValueType extends SymbolEntryInfo {
+export enum ValueType {
+  VOID, PRIMITIVE, ARRAY, ARRAY_REF,
+}
+
+export class ValueTypeInfo extends SymbolEntryInfo {
   public isVoid: boolean;
+  public type: ValueType;
+  public dim: number = 0;
   public primitiveType: PrimitiveType;
 
   constructor(type: PrimitiveType) {
@@ -36,24 +42,27 @@ export class ValueType extends SymbolEntryInfo {
   }
 }
 
-class VoidType extends ValueType {
+class VoidType extends ValueTypeInfo {
   constructor() {
     super(PrimitiveType.VOID);
     this.isVoid = true;
+    this.type = ValueType.VOID;
   }
 }
 
-class TypeInfoPrimitive extends ValueType {
+class TypeInfoPrimitive extends ValueTypeInfo {
   constructor(type: PrimitiveType) {
     super(type);
+    this.type = ValueType.PRIMITIVE;
   }
 }
 
-class TypeInfoArray extends ValueType {
+class TypeInfoArray extends ValueTypeInfo {
   public dimension: number;
   constructor(type: PrimitiveType, dim: number) {
     super(type);
     this.dimension = dim;
+    this.type = ValueType.ARRAY;
   }
   get size() {
     // stack consumption: [ref-to-heap][dim-1][dim-2][dim-n]
@@ -64,11 +73,12 @@ class TypeInfoArray extends ValueType {
   }
 }
 
-class TypeInfoArrayRef extends ValueType {
+class TypeInfoArrayRef extends ValueTypeInfo {
   public dimension: number;
   constructor(type: PrimitiveType, dim: number) {
     super(type);
     this.dimension = dim;
+    this.type = ValueType.ARRAY_REF;
   }
   get size() {
     return getPrimitiveSize('ref');
@@ -77,11 +87,11 @@ class TypeInfoArrayRef extends ValueType {
 
 interface IFunctionParameter {
   name: string;
-  type: ValueType;
+  type: ValueTypeInfo;
 }
 
 class TypeInfoFunction extends SymbolEntryInfo {
-  public returnType: ValueType;
+  public returnType: ValueTypeInfo;
   public parameterList: IFunctionParameter[] = [];
   public entryAddress: number;
 }

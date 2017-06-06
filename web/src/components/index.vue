@@ -21,6 +21,9 @@
       </div>
       <div class="main-stack">
         <ui-tabs type="icon" fullwidth>
+          <ui-tab icon="list">
+            <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
+          </ui-tab>
           <ui-tab icon="code">
             <div class="src-editor">
               <monaco-editor
@@ -38,9 +41,6 @@
           </ui-tab>
           <ui-tab icon="device_hub">
             <ast-viewer :ast="ast"></ast-viewer>
-          </ui-tab>
-          <ui-tab icon="list">
-            <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
           </ui-tab>
           <ui-tab icon="playlist_play">
           </ui-tab>

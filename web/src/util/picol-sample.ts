@@ -54,6 +54,8 @@ int main(){
   return;
 }
 
+int[10,10,10] arr;
+int i,j;
 switch(arr[1,2,3]){
   case 12: i++; break;
   case 13: j++; break;
@@ -89,7 +91,7 @@ const picolSample: {
   default: string;
   [sampleName: string]: string;
 } = {
-  default: functionSample,
+  default: completeSample,
   defaultSample,
   completeSample,
   functionSample,

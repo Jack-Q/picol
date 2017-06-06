@@ -1,9 +1,9 @@
-import {GeneratorError} from './error';
+import { GeneratorError } from './error';
 import {
   Quadruple, QuadrupleArg, QuadrupleArgQuadRef, QuadrupleArgTableRef,
   QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
-import { SymbolEntry } from './symbol-entry';
+import { createValueType, SymbolEntry, ValueType } from './symbol-entry';
 import { PrimitiveType } from './token';
 
 interface INameStatus {
@@ -70,21 +70,12 @@ export class ExecutionContext {
       ...Object.getOwnPropertyNames(this.nameTable)
         .filter((n) => n !== '__ob__') // vue may attach an hidden object here
         .map((n, i) =>
-        `${indentStr}${i}:${n} \t${this.nameTable[n].toString()}`),
+        `${indentStr}${i}:${this.nameTable[n].toString()}`),
 
       ...this.children.map((c) => c.dump(childIndent)),
     ].join('\n');
   }
 }
-
-// global context defines items that is predefined by language
-const createGlobalContext = (): ExecutionContext => {
-  const global = new ExecutionContext();
-
-  // global function
-
-  return global;
-};
 
 /**
  * Generator Context
@@ -125,12 +116,12 @@ export class GeneratorContext {
   }
 
   public constructor() {
-    this.contextStack.push(createGlobalContext());
+    this.createGlobalContext();
   }
 
-  public pushContext() {
+  public pushContext(name: string) {
     const oldContext = this.currentContext;
-    this.contextStack.push(new ExecutionContext(this.currentContext));
+    this.contextStack.push(new ExecutionContext(this.currentContext, name));
     oldContext.addChildContext(this.currentContext);
     return this.currentContext;
   }
@@ -139,8 +130,8 @@ export class GeneratorContext {
     return this.contextStack.pop();
   }
 
-  public wrapInContext(content: () => void) {
-    const ctx = this.pushContext();
+  public wrapInContext(name: string, content: () => void) {
+    const ctx = this.pushContext(name);
     content();
     const popCtx = this.popContext();
     if (ctx !== popCtx) {
@@ -267,4 +258,15 @@ export class GeneratorContext {
     this.continueChain[len - 1] = this.mergeChain(this.continueChain[len - 1], chain);
   }
 
+  // global context defines items that is predefined by language
+  private createGlobalContext() {
+    const global = new ExecutionContext(undefined, 'default global');
+    this.contextStack.push(global);
+
+    // global function
+    this.addEntry.func('show');
+    const show = this.getEntryInfo('show').asFunc;
+    show.returnType = createValueType.void();
+    show.parameterList.push({ name: 'char', type: createValueType.prim(PrimitiveType.CHAR) });
+  }
 }
