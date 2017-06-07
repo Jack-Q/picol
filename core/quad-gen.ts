@@ -392,6 +392,7 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
     if (size) {
       const temp = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.I_MUL, size, dimExpr.toValue(ctx), temp, 'calc array size');
+      size = temp;
     } else {
       size = dimExpr.toValue(ctx);
     }
@@ -428,14 +429,14 @@ const generateDeclarationArrayRef: generateRule<IAttr> = (ctx, node) => {
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
       ctx.addQuadruple(QuadrupleOperator.A_ASS,
-        new QuadrupleArgValue(PrimitiveType.INT, 0),
+        new QuadrupleArgValue(PrimitiveType.INT, undefined),
         Q_NULL,
         ref,
         'default initialization',
       );
     } else {
       const value = generateExpression(ctx, i.children[1]);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, value.toValue(ctx), Q_NULL, ref);
+      ctx.addQuadruple(QuadrupleOperator.R_ASS, value.toValue(ctx), Q_NULL, ref);
     }
   });
   return attr.valid();

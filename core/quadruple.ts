@@ -30,6 +30,9 @@ export enum QuadrupleOperator {
   A_ASS, // array assignment
   A_RET, // array retrieval
 
+  // reference assignment
+  R_ASS, // assign array reference to target
+
   // procedure call
   F_PARA, // prepare argument for procedural call
   F_FUNC, // call procedural (control of flow)

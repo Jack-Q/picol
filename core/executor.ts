@@ -17,6 +17,7 @@ export class Executor {
   public pc: number;
   public frameBase: number;
   public stack: number[];
+  public heapTop: number;
   public heap: number[];
   public temp: number[];
   public program: Quadruple[];
@@ -104,6 +105,19 @@ export class Executor {
         }
         break;
       case QuadrupleOperator.A_RET: // array retrieval
+        break;
+
+      // reference assignment
+      case QuadrupleOperator.R_ASS: // assign array reference to target
+        {
+          // array reference copy
+          const val = quad.argument1 as QuadrupleArgTableRef;
+
+          const dst = quad.result as QuadrupleArgTableRef;
+          this.stackFill(this.frameBase + dst.index, {
+            value: val.index, span: getPrimitiveSize('ref') });
+        }
+        break;
 
       // procedure call
       case QuadrupleOperator.F_PARA: // prepare argument for procedural call
@@ -111,9 +125,16 @@ export class Executor {
       case QuadrupleOperator.F_REV:  // prepare return value
       case QuadrupleOperator.F_RET:  // function return (control of flow)
       case QuadrupleOperator.F_VAL:  // bind return value of function to temp
-
+        break;
       // heap memory management
       case QuadrupleOperator.M_REQ:  // request allocation of heap memory
+        {
+          const size = this.getValue(quad.argument1).value;
+          const target = quad.result as QuadrupleArgVarTemp;
+          const address = this.allocateHeap(size);
+          this.temp[target.tempIndex] = address;
+        }
+        break;
       case QuadrupleOperator.M_FREE: // free heap memory
     }
 
@@ -127,6 +148,7 @@ export class Executor {
   public reset() {
     this.pc = 1;
     this.frameBase = 0;
+    this.heapTop = 0;
     this.heap = [];
     this.stack = [];
     this.temp = [];
@@ -201,5 +223,13 @@ export class Executor {
       case QuadrupleOperator.R_DIV: return { value: val1 / val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
     }
     return { value: 0, span: 0 };
+  }
+
+  private allocateHeap(size: number) {
+    // allocate at the top
+    const baseAddress = this.heapTop;
+    this.heapTop += size;
+    this.pushMsg('allocate heap from ' + baseAddress + ' to ' + this.heapTop + ' of size ' + size);
+    return baseAddress;
   }
 }
