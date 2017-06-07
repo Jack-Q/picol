@@ -43,6 +43,7 @@
             <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
           </ui-tab>
           <ui-tab icon="playlist_play">
+            <execution :program="quadrupleTable" />
           </ui-tab>
         </ui-tabs>
       </div>
@@ -64,6 +65,7 @@ import FilePanel from './file-panel/file-panel';
 import AstViewer from './syntax/ast-viewer';
 import Intermediate from './intermediate/intermediate';
 import QuadViewer from './intermediate/quad-viewer';
+import Execution from './execution/execution';
 
 import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext } from '../../../core/main';
 
@@ -82,6 +84,7 @@ const loadLanguage = (): void => {
     QuadViewer,
     Intermediate,
     FilePanel,
+    Execution,
   },
 })
 export default class Index extends Vue {
