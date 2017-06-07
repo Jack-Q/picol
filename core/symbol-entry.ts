@@ -111,7 +111,9 @@ class TypeInfoFunction extends SymbolEntryInfo {
   public parameterList: IFunctionParameter[] = [];
   public entryAddress: number;
   public toString() {
-    return '(' + this.parameterList.map((p) => p.type.toString()).join(',') + ')=>' + this.returnType.toString();
+    return '(' +
+      (this.parameterList ? this.parameterList.map((p) => p.type && p.type.toString()).join(',') : '***')
+      + ')=>' + this.returnType.toString();
   }
 }
 

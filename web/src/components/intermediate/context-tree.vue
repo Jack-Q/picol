@@ -1,6 +1,6 @@
 <template>
   <div class="root" v-if="contextTree">
-    <pre>{{contextTree.dump()}}</pre>
+    <pre>{{dump()}}</pre>
   </div>
   <div v-else>
     No context
@@ -19,6 +19,14 @@ import { Quadruple } from '../../../../core/main';
 })
 export default class ContextTree extends Vue {
   @Prop contextTree = p({type: Object})
+
+  dump() {
+    try{
+      return (this.contextTree as any).dump();
+    } catch(e){
+      return e.message;
+    }
+  }
 }
 </script>
 

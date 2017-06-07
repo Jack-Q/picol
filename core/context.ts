@@ -289,6 +289,13 @@ export class GeneratorContext {
     this.addEntry.func('show');
     const show = this.getEntryInfo('show').asFunc;
     show.returnType = createValueType.void();
-    show.parameterList.push({ name: 'char', type: createValueType.prim(PrimitiveType.CHAR) });
+    show.entryAddress = -10;
+    show.parameterList.push({ name: 'ch', type: createValueType.prim(PrimitiveType.CHAR) });
+
+    this.addEntry.func('showInt');
+    const showInt = this.getEntryInfo('showInt').asFunc;
+    showInt.entryAddress = -11;
+    showInt.returnType = createValueType.void();
+    showInt.parameterList.push({ name: 'num', type: createValueType.prim(PrimitiveType.INT) });
   }
 }

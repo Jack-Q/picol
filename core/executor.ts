@@ -1,13 +1,21 @@
 import { ErrorSeverity } from './error';
-import { Quadruple, QuadrupleArgQuadRef, QuadrupleOperator } from './quadruple';
+import { Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgQuadRef, QuadrupleArgTableRef, QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator } from './quadruple';
+import { getPrimitiveSize } from './symbol-entry';
+import { PrimitiveType } from './token';
 
 interface IConsoleMessage {
   message: string;
   severity: ErrorSeverity;
 }
 
+interface IExecutionVal {
+  value: any;
+  span: number;
+}
+
 export class Executor {
   public pc: number;
+  public frameBase: number;
   public stack: number[];
   public heap: number[];
   public temp: number[];
@@ -23,7 +31,6 @@ export class Executor {
   }
 
   public step() {
-    console.log(this.pc);
     // read quadruple
     const quad = this.program[this.pc];
     if (!quad) {
@@ -45,7 +52,17 @@ export class Executor {
       case QuadrupleOperator.J_LTE: // jump if less than or equal
       case QuadrupleOperator.J_EZ:  // jump if equal to zero
       case QuadrupleOperator.J_NEZ: // jump if not equal to zero
-
+        {
+          const val1 = this.getValue(quad.argument1);
+          const val2 = this.getValue(quad.argument2);
+          if (this.compareByOperator(quad.operator, val1.value, val2.value)) {
+            this.pc = (quad.result as QuadrupleArgQuadRef).quadIndex;
+            this.pushMsg(`jump conditionally to ${this.pc}: ${val1.value} ${quad.operatorName} ${val2.value}`);
+          } else {
+            this.pushMsg(`unsatisfied jump condition: ${val1.value} ${quad.operatorName} ${val2.value}`);
+          }
+        }
+        break;
       // integer arithmetic
       case QuadrupleOperator.I_ADD:
       case QuadrupleOperator.I_SUB:
@@ -57,12 +74,28 @@ export class Executor {
       case QuadrupleOperator.R_SUB:
       case QuadrupleOperator.R_MUL:
       case QuadrupleOperator.R_DIV:
+        {
+          const val1 = this.getValue(quad.argument1);
+          const val2 = this.getValue(quad.argument2);
+          const result = this.calcByOperator(quad.operator, val1.value, val2.value);
+          const target = quad.result as QuadrupleArgVarTemp;
+          console.log(target, result);
+          this.temp[target.tempIndex] = result.value;
+        }
+        break;
 
       // primitive variable assignment
       case QuadrupleOperator.V_ASS:
-
+        break;
       // array assignment
       case QuadrupleOperator.A_ASS: // array assignment
+        {
+          const val = quad.argument1 as QuadrupleArgValue;
+          const dst = quad.result as QuadrupleArgTableRef;
+
+          this.stackFill(this.frameBase + dst.index, this.getValue(val) );
+        }
+        break;
       case QuadrupleOperator.A_RET: // array retrieval
 
       // procedure call
@@ -86,6 +119,7 @@ export class Executor {
 
   public reset() {
     this.pc = 0;
+    this.frameBase = 0;
     this.heap = [];
     this.stack = [];
     this.temp = [];
@@ -96,5 +130,68 @@ export class Executor {
   }
   private pushMsg(message: string, severity: ErrorSeverity = ErrorSeverity.INFO) {
     this.console.push({ message, severity });
+  }
+  private stackFill(addr: number, val: IExecutionVal) {
+    this.stack[addr] = val.value;
+    for (let i = 1; i < val.span; i++) {
+      this.stack[addr + i] = -1;
+    }
+  }
+  private getValue(arg: QuadrupleArg): IExecutionVal {
+    // read instance number
+    if (arg.type === QuadrupleArgType.VALUE_INST) {
+      const valInst = arg as QuadrupleArgValue;
+      return {value: valInst.value, span: getPrimitiveSize(valInst.valueType)};
+    }
+    // read temp
+    if (arg.type === QuadrupleArgType.VAR_TEMP) {
+      const valTemp = arg as QuadrupleArgVarTemp;
+      return {value: this.temp[valTemp.tempIndex], span: 1};
+    }
+    // read stack
+    if (arg.type === QuadrupleArgType.TABLE_REF) {
+      const valStack = arg as QuadrupleArgTableRef;
+      return {value: this.stack[this.frameBase + valStack.index], span: 1}; // TODO: variable size span
+    }
+    // read heap
+    if (arg.type === QuadrupleArgType.ARRAY_ADDR) {
+      const valInst = arg as QuadrupleArgArrayAddr;
+      const base = this.getValue(valInst.base);
+      const offset = this.getValue(valInst.offset);
+      return {value: this.heap[base.value + offset.value], span: 1}; // TODO: variable size span
+    }
+    // read val
+    if (arg.type === QuadrupleArgType.NULL) {
+      return {value: 0, span: 0};
+    }
+    throw new Error();
+  }
+  private compareByOperator(op: QuadrupleOperator, val1: number, val2: number = 0): boolean {
+    switch (op) {
+      case QuadrupleOperator.J_EQ: return val1 === val2;
+      case QuadrupleOperator.J_NE: return val1 !== val2;
+      case QuadrupleOperator.J_GT: return val1 > val2;
+      case QuadrupleOperator.J_GTE: return val1 >= val2;
+      case QuadrupleOperator.J_LT: return val1 < val2;
+      case QuadrupleOperator.J_LTE: return val1 <= val2;
+      case QuadrupleOperator.J_EZ: return val1 === 0;
+      case QuadrupleOperator.J_NEZ: return val1 !== 0;
+    }
+    return false;
+  }
+  private calcByOperator(op: QuadrupleOperator, val1: number, val2: number): IExecutionVal {
+    switch (op) {
+      case QuadrupleOperator.I_ADD: return { value: val1 + val2, span: getPrimitiveSize(PrimitiveType.INT) };
+      case QuadrupleOperator.I_SUB: return { value: val1 - val2, span: getPrimitiveSize(PrimitiveType.INT) };
+      case QuadrupleOperator.I_MUL: return { value: val1 * val2, span: getPrimitiveSize(PrimitiveType.INT) };
+      case QuadrupleOperator.I_DIV: return { value: val1 / val2, span: getPrimitiveSize(PrimitiveType.INT) };
+
+      // float point (real) arithmetic
+      case QuadrupleOperator.R_ADD: return { value: val1 + val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
+      case QuadrupleOperator.R_SUB: return { value: val1 - val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
+      case QuadrupleOperator.R_MUL: return { value: val1 * val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
+      case QuadrupleOperator.R_DIV: return { value: val1 / val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
+    }
+    return { value: 0, span: 0 };
   }
 }
