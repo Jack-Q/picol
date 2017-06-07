@@ -2,7 +2,7 @@
   <div class="root">
     <div v-if="quadruples.length" class="list">
       <div v-for="q in quadruples" class="quadruple-item">
-        <div class="quad-index">{{q.i}}</div>
+        <div class="quad-index">{{q.i + 1}}</div>
         <div class="quad-op">{{q.op}}</div>
         <div class="quad-arg">{{q.a1}}</div>
         <div class="quad-arg">{{q.a2}}</div>

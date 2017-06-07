@@ -130,7 +130,7 @@ export class GeneratorContext {
   }
 
   public get nextQuadrupleIndex(): number {
-    return this.quadrupleList.length;
+    return this.quadrupleList.length + 1;
   }
 
   public constructor() {
@@ -212,7 +212,7 @@ export class GeneratorContext {
   public backPatchChain(head: number, target: number) {
     let q = head;
     while (q !== 0) {
-      const quadRef = this.quadrupleList[q].result as QuadrupleArgQuadRef;
+      const quadRef = this.quadrupleList[q - 1].result as QuadrupleArgQuadRef;
       q = quadRef.quadIndex;
       quadRef.quadIndex = target;
     }
@@ -231,7 +231,7 @@ export class GeneratorContext {
     }
     let q = nHead;
     while (true) {
-      const quadRef = this.quadrupleList[q].result as QuadrupleArgQuadRef;
+      const quadRef = this.quadrupleList[q - 1].result as QuadrupleArgQuadRef;
       q = quadRef.quadIndex;
       if (q === 0) {
         quadRef.quadIndex = oHead;
