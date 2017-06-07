@@ -4,6 +4,7 @@ import Vue from 'vue';
 import Router from 'vue-router';
 import App from './App';
 import Index from './components/index';
+import fileModel from './model/file-model';
 import './resource/font.css';
 
 Vue.use(KeenUI);

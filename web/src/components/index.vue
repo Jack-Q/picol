@@ -17,13 +17,10 @@
     </div>
     <div class="body">
       <div class="left-aside">
-
+        <file-panel />
       </div>
       <div class="main-stack">
         <ui-tabs type="icon" fullwidth>
-          <ui-tab icon="list">
-            <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
-          </ui-tab>
           <ui-tab icon="code">
             <div class="src-editor">
               <monaco-editor
@@ -33,7 +30,7 @@
                 width='100%'
                 height='100%'
                 theme='PicolTheme'
-                @mounted="editorMounted"
+                @mounted="editorMounted($event)"
                 @codeChange="editorCodeChange"
                 language='Picol'>
               </monaco-editor>
@@ -41,6 +38,9 @@
           </ui-tab>
           <ui-tab icon="device_hub">
             <ast-viewer :ast="ast"></ast-viewer>
+          </ui-tab>
+          <ui-tab icon="list">
+            <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
           </ui-tab>
           <ui-tab icon="playlist_play">
           </ui-tab>
@@ -55,10 +55,12 @@
 
 <script lang="ts">
 /// <reference path="../../../node_modules/monaco-editor/monaco.d.ts" />
-import { Component, Vue } from 'av-ts';
+import { Component, Vue, Lifecycle } from 'av-ts';
+import fileModel from '../model/file-model';
 import MonacoTokenizer from '../util/monaco-tokenizer';
 import MonacoEditor from './monaco-editor/monaco-editor';
 
+import FilePanel from './file-panel/file-panel';
 import AstViewer from './syntax/ast-viewer';
 import Intermediate from './intermediate/intermediate';
 import QuadViewer from './intermediate/quad-viewer';
@@ -79,22 +81,40 @@ const loadLanguage = (): void => {
     AstViewer,
     QuadViewer,
     Intermediate,
+    FilePanel,
   },
 })
 export default class Index extends Vue {
+  editor: monaco.editor.ICodeEditor;
   code = MonacoTokenizer.picolSample.default
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
   ast: ParseNode|null = null
   quadrupleTable: Quadruple[] = []
   contextTree: ExecutionContext|null = null
 
-  editorMounted() {
+  editorMounted(editor: monaco.editor.ICodeEditor) {
+    console.log('load', editor);
+    this.editor = editor;
     loadLanguage();
+  }
+
+  @Lifecycle beforeUpdate(){
+    // update model selection
+    const current = fileModel.currentFile;
+    if(!current.model || current.model !== this.editor.getModel()){
+      if(this.editor){
+        if(!current.model){
+          current.model = monaco.editor.createModel(current.src, 'Picol');
+        }
+        this.editor.setModel(current.model);
+      }
+    }
   }
 
   editorCodeChange(editor: monaco.editor.ICodeEditor){
     const model = editor.getModel();
     this.code = model.getValue();
+    fileModel.currentFile.src = this.code;
     const tokenList = Array.from(core.lexer(this.code));
     const markers: monaco.editor.IMarkerData[] = [];
     tokenList.map((t)=>{
@@ -202,6 +222,7 @@ export default class Index extends Vue {
 }
 .left-aside {
   flex: 1;
+  min-width: 220px;
 }
 .main-stack {
   flex: 4;
