@@ -400,7 +400,7 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
     throw new GeneratorError('empty array dimension');
   }
   const totalSize = ctx.getTempVar();
-  const elementSize = arrEntryInfo.elementSize; // TODO: get size by element type
+  const elementSize = arrEntryInfo.elementSize;
   ctx.addQuadruple(QuadrupleOperator.I_MUL, size, new QuadrupleArgValue(PrimitiveType.INT, elementSize),
     totalSize, 'calc total size');
 

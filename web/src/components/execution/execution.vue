@@ -21,15 +21,30 @@
     </div>
     <div class="col temp-col">
       Temp
-      {{executor.temp}}
+      <div>
+        <div v-for="(c, i) in executor.temp" class="memory-view-row">
+          <div class="index">{{i}}</div>
+          <div class="value">{{c}}</div> 
+        </div>
+      </div>
     </div>
     <div class="col stack-col">
       Stack
-      {{executor.stack}}
+      <div>
+        <div v-for="(c, i) in executor.stack" class="memory-view-row">
+          <div class="index">{{i}}</div>
+          <div class="value">{{c}}</div> 
+        </div>
+      </div>
     </div>
     <div class="col heap-col">
       Heap
-      {{executor.heap}}
+      <div>
+        <div v-for="(c, i) in executor.heap" class="memory-view-row">
+          <div class="index">{{i}}</div>
+          <div class="value">{{c}}</div> 
+        </div>
+      </div>
     </div>
     <div class="program">
       <quad-viewer :quadList="program" />
@@ -132,5 +147,15 @@ export default class Execution extends Vue {
   }
   .console{
     overflow-y: auto;
+  }
+  .memory-view-row{
+    display: flex;
+    text-align: center;
+  }
+  .memory-view-row .index{
+    min-width: 35px;
+  }
+  .memory-view-row .value{
+    flex: 1;
   }
 </style>

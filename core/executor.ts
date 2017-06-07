@@ -32,7 +32,7 @@ export class Executor {
 
   public step() {
     // read quadruple
-    const quad = this.program[this.pc];
+    const quad = this.program[this.pc - 1];
     if (!quad) {
       return this.pushError('program counter out of range');
     }
@@ -91,9 +91,16 @@ export class Executor {
       case QuadrupleOperator.A_ASS: // array assignment
         {
           const val = quad.argument1 as QuadrupleArgValue;
-          const dst = quad.result as QuadrupleArgTableRef;
-
-          this.stackFill(this.frameBase + dst.index, this.getValue(val) );
+          if (quad.result.type === QuadrupleArgType.ARRAY_ADDR) {
+            const dst = quad.result as QuadrupleArgArrayAddr;
+            const base = dst.base.type === QuadrupleArgType.TABLE_REF
+              ? (dst.base as QuadrupleArgTableRef).index : this.getValue(dst.base).value;
+            const offset = this.getValue(dst.offset).value;
+            this.stackFill(this.frameBase + base + offset, this.getValue(val));
+          } else {
+            const dst = quad.result as QuadrupleArgTableRef;
+            this.stackFill(this.frameBase + dst.index, this.getValue(val));
+          }
         }
         break;
       case QuadrupleOperator.A_RET: // array retrieval
@@ -118,7 +125,7 @@ export class Executor {
   }
 
   public reset() {
-    this.pc = 0;
+    this.pc = 1;
     this.frameBase = 0;
     this.heap = [];
     this.stack = [];
@@ -146,6 +153,7 @@ export class Executor {
     // read temp
     if (arg.type === QuadrupleArgType.VAR_TEMP) {
       const valTemp = arg as QuadrupleArgVarTemp;
+      console.log(valTemp.tempIndex);
       return {value: this.temp[valTemp.tempIndex], span: 1};
     }
     // read stack
@@ -153,12 +161,12 @@ export class Executor {
       const valStack = arg as QuadrupleArgTableRef;
       return {value: this.stack[this.frameBase + valStack.index], span: 1}; // TODO: variable size span
     }
-    // read heap
+    // read stack in array style
     if (arg.type === QuadrupleArgType.ARRAY_ADDR) {
       const valInst = arg as QuadrupleArgArrayAddr;
-      const base = this.getValue(valInst.base);
-      const offset = this.getValue(valInst.offset);
-      return {value: this.heap[base.value + offset.value], span: 1}; // TODO: variable size span
+      const base = (valInst.base as QuadrupleArgTableRef).index;
+      const offset = this.getValue(valInst.offset).value;
+      return {value: this.heap[this.frameBase + base + offset], span: 1}; // TODO: variable size span
     }
     // read val
     if (arg.type === QuadrupleArgType.NULL) {

@@ -246,7 +246,8 @@ export default class Index extends Vue {
   margin: 0;
   padding: 0;
   flex: 1;
-  height: calc(100% - 45px)
+  height: calc(100% - 45px);
+  border: 0;
 }
 
 .right-aside {
