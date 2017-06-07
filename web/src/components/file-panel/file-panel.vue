@@ -19,15 +19,31 @@
         </div>
       </div>
       <div class="editing-list">
-        <list-item v-for='(f,i) in model.fileList' :key="f.name" @click.native="model.select(i)">{{f.name}}</list-item>
+        <list-item v-for='(f,i) in model.fileList' :key="f.name" @click.native="model.select(i)" >
+          <div class="editing-list-item" :class="{current: model.current === i}">
+            <div class="content">
+              {{f.name}}
+              {{f.src !== f.savedSrc ? '*' : ''}}
+            </div>
+            <div class="inline-actions">
+              <div class="inline-action" @click.stop="model.saveFile(f)">
+                <ui-icon>save</ui-icon>
+              </div>
+              <div class="inline-action" @click.stop="model.deleteFile(f)">
+                <ui-icon>delete</ui-icon>
+              </div>
+            </div>
+          </div>
+        </list-item>
       </div>
     </div>
   </div>
 </template>
 
 <script lang='ts'>
+
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import fileModel from '../../model/file-model';
+import fileModel, {IEditingFile} from '../../model/file-model';
 import ListItem from './list-item';
 
 @Component({
@@ -39,6 +55,7 @@ import ListItem from './list-item';
 export default class LeftPanel extends Vue {
   model = fileModel;
   @Prop ast = p({type: Object})
+  
 }
 </script>
 
@@ -79,6 +96,8 @@ export default class LeftPanel extends Vue {
 .editing-list {
   flex: 1;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .action {
@@ -86,5 +105,62 @@ export default class LeftPanel extends Vue {
   cursor: pointer;
   position: relative;
   color: #999;
+}
+.editing-list-item{
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  line-height: 30px;
+  padding: 10px 20px;
+}
+
+.content {
+  flex: 1;
+}
+
+.inline-actions {
+  z-index: 10;
+  opacity: 0.3;
+  transition: all ease 400ms;
+}
+
+.editing-list-item::after {
+  transition: all ease 400ms;
+  display: block;
+  content: '';
+  width: 0;
+  border-top: 25px transparent solid;
+  border-bottom: 25px transparent solid;
+  border-right: 20px #fff solid;
+  right: -20px;
+  opacity: 0;
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  top: 0;
+}
+
+.editing-list-item.current::after{
+  right: 0;
+  opacity: 1;
+}
+
+.inline-action {
+  padding: 10px 5px; 
+  display: inline-block;
+  margin: -10px 0;
+  color: #aaa;
+  transition: all ease 400ms;
+  cursor: pointer;
+}
+
+.inline-action:hover {
+  color: #5cf;
+}
+
+.editing-list-item:hover .inline-actions{
+  opacity: 1;
 }
 </style>

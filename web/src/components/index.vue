@@ -93,7 +93,6 @@ export default class Index extends Vue {
   contextTree: ExecutionContext|null = null
 
   editorMounted(editor: monaco.editor.ICodeEditor) {
-    console.log('load', editor);
     this.editor = editor;
     loadLanguage();
   }
