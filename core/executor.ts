@@ -13,6 +13,8 @@ interface IExecutionVal {
   span: number;
 }
 
+const HEAP_BASE = 10000;
+
 export class Executor {
   public pc: number;
   public frameBase: number;
@@ -105,6 +107,11 @@ export class Executor {
         }
         break;
       case QuadrupleOperator.A_RET: // array retrieval
+        {
+          const data = this.getValue(quad.argument1);
+          const target = quad.result as QuadrupleArgVarTemp;
+          this.temp[target.tempIndex] = data.value;
+        }
         break;
 
       // reference assignment
@@ -148,7 +155,7 @@ export class Executor {
   public reset() {
     this.pc = 1;
     this.frameBase = 0;
-    this.heapTop = 0;
+    this.heapTop = HEAP_BASE;
     this.heap = [];
     this.stack = [];
     this.temp = [];
@@ -161,9 +168,18 @@ export class Executor {
     this.console.push({ message, severity });
   }
   private stackFill(addr: number, val: IExecutionVal) {
-    this.stack[addr] = val.value;
-    for (let i = 1; i < val.span; i++) {
-      this.stack[addr + i] = -1;
+    if (addr > HEAP_BASE) {
+      // assign to heap
+      this.heap[addr - HEAP_BASE] = val.value;
+      for (let i = 1; i < val.span; i++) {
+        this.heap[addr + i - HEAP_BASE] = -1;
+      }
+    } else {
+      // assign to stack
+      this.stack[this.frameBase + addr] = val.value;
+      for (let i = 1; i < val.span; i++) {
+        this.stack[this.frameBase + addr + i] = -1;
+      }
     }
   }
   private getValue(arg: QuadrupleArg): IExecutionVal {
@@ -188,7 +204,12 @@ export class Executor {
       const valInst = arg as QuadrupleArgArrayAddr;
       const base = (valInst.base as QuadrupleArgTableRef).index;
       const offset = this.getValue(valInst.offset).value;
-      return {value: this.heap[this.frameBase + base + offset], span: 1}; // TODO: variable size span
+      console.log(base, offset);
+      if (offset > HEAP_BASE) {
+        return {value: this.heap[base + offset - HEAP_BASE], span: 1}; // TODO: variable size span
+      } else {
+        return {value: this.stack[this.frameBase + base + offset], span: 1}; // TODO: variable size span
+      }
     }
     // read val
     if (arg.type === QuadrupleArgType.NULL) {

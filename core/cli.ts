@@ -25,7 +25,8 @@ if (!fileName) {
 const testCode = fs.readFileSync(fileName).toString();
 const lexer = Main.lexer(testCode);
 const tokenList = Array.from(lexer);
-printToken(tokenList.filter((t) => t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE));
+
+printToken(tokenList);
 const ast = Main.parser(tokenList);
 ast.print();
 const intermediateContext = Main.generator(ast);

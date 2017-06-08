@@ -83,13 +83,13 @@ class AttrExpr implements IAttr {
     const nxq = ctx.nextQuadrupleIndex;
 
     // nxq
-    ctx.addQuadruple(QuadrupleOperator.A_ASS, new QuadrupleArgValue(PrimitiveType.BOOL, true),
+    ctx.addQuadruple(QuadrupleOperator.V_ASS, new QuadrupleArgValue(PrimitiveType.BOOL, true),
       Q_NULL, temp, 'convert boolean to value: true');
     // nxq + 1
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL,
       new QuadrupleArgQuadRef(nxq + 3), 'convert boolean to value: jump');
     // nxq + 2
-    ctx.addQuadruple(QuadrupleOperator.A_ASS, new QuadrupleArgValue(PrimitiveType.BOOL, false),
+    ctx.addQuadruple(QuadrupleOperator.V_ASS, new QuadrupleArgValue(PrimitiveType.BOOL, false),
       Q_NULL, temp, 'convert boolean to value: false');
     // nxq + 3
 
@@ -124,6 +124,16 @@ const attr = {
 
 type generateRule<T extends IAttr> = (ctx: GeneratorContext, node: ParseNode, newContext?: boolean) => T;
 
+const assign = (ctx: GeneratorContext, val: QuadrupleArg, target: AttrExpr) => {
+  const ref = target.toRef(ctx);
+  if (ref.type === QuadrupleArgType.TABLE_REF) {
+    // Value assignment
+    ctx.addQuadruple(QuadrupleOperator.V_ASS, val, Q_NULL, ref);
+  } else if (ref.type === QuadrupleArgType.ARRAY_ADDR) {
+    ctx.addQuadruple(QuadrupleOperator.A_ASS, val, Q_NULL, ref);
+  }
+};
+
 const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   // boolean operand
   const operand = generateExpression(ctx, node.children[0]);
@@ -149,26 +159,27 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   let temp2: QuadrupleArg | undefined;
   const Q_ZERO = new QuadrupleArgValue(PrimitiveType.INT, 0);
   const Q_ONE = new QuadrupleArgValue(PrimitiveType.INT, 1);
+
   switch (node.value) {
     case ParseOperatorType.UNI_INC_PRE:
       ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ONE, temp);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, temp, Q_NULL, operand.toRef(ctx));
+      assign(ctx, temp, operand);
       break;
     case ParseOperatorType.UNI_INC_POS:
       ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO, temp);
       temp2 = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.I_ADD, temp, Q_ONE, temp2);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, temp2, Q_NULL, operand.toRef(ctx));
+      assign(ctx, temp2, operand);
       break;
     case ParseOperatorType.UNI_DEC_PRE:
       ctx.addQuadruple(QuadrupleOperator.I_SUB, opVal, Q_ONE, temp);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, temp, Q_NULL, operand.toRef(ctx));
+      assign(ctx, temp, operand);
       break;
     case ParseOperatorType.UNI_DEC_POS:
       ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO, temp);
       temp2 = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.I_SUB, temp, Q_ONE, temp2);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, temp2, Q_NULL, operand.toRef(ctx));
+      assign(ctx, temp2, operand);
       break;
     default:
       throw new GeneratorError('unknown unary operator');
@@ -212,7 +223,8 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
   const genAssOperator = (assOp: QuadrupleOperator): AttrExpr => {
     const temp = ctx.getTempVar();
     ctx.addQuadruple(assOp, lOp.toRef(ctx), rOp.toValue(ctx), temp);
-    ctx.addQuadruple(QuadrupleOperator.A_ASS, temp, Q_NULL, lOp.toRef(ctx));
+    assign(ctx, temp, lOp);
+
     return new AttrExpr(temp);
   };
 
@@ -232,7 +244,7 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
     case ParseOperatorType.BIN_ASS_MUL: return genAssOperator(QuadrupleOperator.I_MUL);
     case ParseOperatorType.BIN_ASS_DIV: return genAssOperator(QuadrupleOperator.I_DIV);
     case ParseOperatorType.BIN_ASS_VAL:
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, rOp.toValue(ctx), Q_NULL, lOp.toRef(ctx));
+      assign(ctx, rOp.toValue(ctx), lOp);
       return new AttrExpr(lOp.toRef(ctx));
     case ParseOperatorType.BIN_REL_EQ: return genRelOperator(QuadrupleOperator.J_EQ);
     case ParseOperatorType.BIN_REL_GT: return genRelOperator(QuadrupleOperator.J_GT);
@@ -268,7 +280,7 @@ const generateExpressionArrAccess: generateRule<AttrExpr> = (ctx, node) => {
   node.children[1].children.map((dimNode, index) => {
     const dimAttr = generateExpression(ctx, dimNode).toValue(ctx);
     const arrLenRef = new QuadrupleArgArrayAddr(ctx.getEntry(id),
-      new QuadrupleArgValue(PrimitiveType.INT, ARRAY_DIM_DEF_OFFSET + index));
+      new QuadrupleArgValue(PrimitiveType.INT, ARRAY_DIM_DEF_OFFSET + index * getPrimitiveSize(PrimitiveType.INT)));
     if (addrOffset) {
       const arrLen = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.A_RET, arrLenRef, Q_NULL, arrLen,
@@ -360,7 +372,7 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
       );
     } else {
       const value = generateExpression(ctx, i.children[1]);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS, value.toValue(ctx), Q_NULL, ref);
+      assign(ctx, ref, value);
     }
     return { name: i.children[0]};
   });
