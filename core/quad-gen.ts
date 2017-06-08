@@ -259,15 +259,39 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
 
 const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
   const func = generateExpression(ctx, node.children[0]).toValue(ctx);
+  const funcInfo = ctx.getEntryInfo(node.children[0].value).asFunc;
   const argList = node.children[1].children;
-  argList.forEach((arg) => {
-    const val = generateExpression(ctx, arg).toValue(ctx);
-    ctx.addQuadruple(QuadrupleOperator.F_PARA, Q_NULL, Q_NULL, val);
-  });
-  ctx.addQuadruple(QuadrupleOperator.F_FUNC, Q_NULL, Q_NULL, func);
 
+  // new frame is based on the top of last stack
+  const funcFrameBase = ctx.currentHeapTop;
+  let funcFrame = funcFrameBase;
+
+  funcFrame += getPrimitiveSize(PrimitiveType.INT); // Skip parent frame top (apply this when return this function)
+  // TODO: display table
+  funcFrame += getPrimitiveSize(PrimitiveType.INT); // Skip return address (Quadruple Index)
+
+  // heap address for return value retrieval
+  const returnVal = new QuadrupleArgArrayAddr(Q_NULL, new QuadrupleArgValue(PrimitiveType.INT, funcFrame));
+  funcFrame += funcInfo.returnType.size; // Skip return value
+
+  argList.forEach((arg, ind) => {
+    const val = generateExpression(ctx, arg).toValue(ctx);
+    const target = new QuadrupleArgArrayAddr(Q_NULL, new QuadrupleArgValue(PrimitiveType.INT, funcFrame));
+    funcFrame += funcInfo.parameterList[ind].type.size;
+    ctx.addQuadruple(QuadrupleOperator.F_PARA, val, Q_NULL, target);
+  });
+
+  const funcFrameBaseArg = new QuadrupleArgValue(PrimitiveType.INT, funcFrameBase);
+  ctx.addQuadruple(QuadrupleOperator.F_FUNC, funcFrameBaseArg, Q_NULL, func);
+
+  // no return value
+  if (funcInfo.returnType.isVoid) {
+    return AttrExpr.newPrimValue(PrimitiveType.VOID, undefined);
+  }
+
+  // retrieve return value into temporary variable
   const temp = ctx.getTempVar();
-  ctx.addQuadruple(QuadrupleOperator.F_VAL, Q_NULL, Q_NULL, temp);
+  ctx.addQuadruple(QuadrupleOperator.V_ASS, returnVal, Q_NULL, temp);
   return new AttrExpr(temp);
 };
 
@@ -372,7 +396,7 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
       );
     } else {
       const value = generateExpression(ctx, i.children[1]);
-      assign(ctx, ref, value);
+      ctx.addQuadruple(QuadrupleOperator.V_ASS, value.toValue(ctx), Q_NULL, ref);
     }
     return { name: i.children[0]};
   });
@@ -469,11 +493,14 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
   }, () => {
     const functionInfo = ctx.getEntryInfo(name).asFunc;
 
+    ctx.addEntry.prim('?ppc', PrimitiveType.INT);
+    ctx.addEntry.prim('?addr', PrimitiveType.INT);
+
     // return value
     const returnType = getItemType(node.children[1]);
     functionInfo.returnType = returnType;
-
     // allocate address for return value, no space allocated for void function
+    // return is allocated after parameter
     if (returnType.type === ValueType.ARRAY_REF) {
       ctx.addEntry.arrRef('?ret', returnType.primitiveType, returnType.dim);
     } else if (returnType.type === ValueType.PRIMITIVE) {
@@ -674,7 +701,8 @@ const generateStatementSwitch: generateRule<AttrStat> = (ctx, node) => {
 
 const generateStatementReturn: generateRule<IAttr> = (ctx, node) => {
   const exprAttr = generateExpression(ctx, node.children[0]).toValue(ctx);
-  ctx.addQuadruple(QuadrupleOperator.F_REV, Q_NULL, Q_NULL, exprAttr);
+  const retVal = ctx.getEntry('?ret');
+  ctx.addQuadruple(QuadrupleOperator.V_ASS, exprAttr, Q_NULL, retVal);
   ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
   return attr.valid();
 };

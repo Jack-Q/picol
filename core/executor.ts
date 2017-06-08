@@ -1,5 +1,8 @@
 import { ErrorSeverity } from './error';
-import { Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgQuadRef, QuadrupleArgTableRef, QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator } from './quadruple';
+import {
+  Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgQuadRef, QuadrupleArgTableRef,
+  QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
+} from './quadruple';
 import { getPrimitiveSize } from './symbol-entry';
 import { PrimitiveType } from './token';
 
@@ -19,6 +22,7 @@ export class Executor {
   public pc: number;
   public frameBase: number;
   public stack: number[];
+  public stackTop: number;
   public heapTop: number;
   public heap: number[];
   public temp: number[];
@@ -89,21 +93,21 @@ export class Executor {
 
       // primitive variable assignment
       case QuadrupleOperator.V_ASS:
+        {
+          const val = quad.argument1 as QuadrupleArgValue;
+          const dst = quad.result as QuadrupleArgTableRef;
+          this.stackFill(dst.index, this.getValue(val));
+        }
         break;
       // array assignment
       case QuadrupleOperator.A_ASS: // array assignment
         {
           const val = quad.argument1 as QuadrupleArgValue;
-          if (quad.result.type === QuadrupleArgType.ARRAY_ADDR) {
-            const dst = quad.result as QuadrupleArgArrayAddr;
-            const base = dst.base.type === QuadrupleArgType.TABLE_REF
-              ? (dst.base as QuadrupleArgTableRef).index : this.getValue(dst.base).value;
-            const offset = this.getValue(dst.offset).value;
-            this.stackFill(this.frameBase + base + offset, this.getValue(val));
-          } else {
-            const dst = quad.result as QuadrupleArgTableRef;
-            this.stackFill(this.frameBase + dst.index, this.getValue(val));
-          }
+          const dst = quad.result as QuadrupleArgArrayAddr;
+          const base = dst.base.type === QuadrupleArgType.TABLE_REF
+            ? (dst.base as QuadrupleArgTableRef).index : this.getValue(dst.base).value;
+          const offset = this.getValue(dst.offset).value;
+          this.stackFill(base + offset, this.getValue(val));
         }
         break;
       case QuadrupleOperator.A_RET: // array retrieval
@@ -121,16 +125,50 @@ export class Executor {
           const val = quad.argument1 as QuadrupleArgTableRef;
 
           const dst = quad.result as QuadrupleArgTableRef;
-          this.stackFill(this.frameBase + dst.index, {
+          this.stackFill(dst.index, {
             value: val.index, span: getPrimitiveSize('ref') });
         }
         break;
 
       // procedure call
       case QuadrupleOperator.F_PARA: // prepare argument for procedural call
+        {
+          // F_PARA VAL _ ADDR
+          const value = this.getValue(quad.argument1);
+          const target = this.getValue((quad.result as QuadrupleArgArrayAddr).offset);
+          this.stackFill(this.frameBase + target.value, value);
+        }
+        break;
       case QuadrupleOperator.F_FUNC: // call procedural (control of flow)
+        {
+          // F_FUNC FRAME_BASE _ ADDR
+          const frameBase = this.getValue(quad.argument1).value;
+          const funcAddr = (quad.result as QuadrupleArgQuadRef).quadIndex;
+
+          const oldNextPc = this.pc;
+          const oldFrameBase = this.frameBase;
+          this.frameBase += frameBase;
+          this.pc = funcAddr;
+
+          // set parent frame base
+          const parentFrameBase = { value: oldFrameBase, span: getPrimitiveSize(PrimitiveType.INT) };
+          this.stackFill(0, parentFrameBase);
+          // set return addr (old pc)
+          const parentNextPc = { value: oldNextPc, span: getPrimitiveSize(PrimitiveType.INT) };
+          this.stackFill(parentFrameBase.span, parentNextPc);
+        }
+        break;
       case QuadrupleOperator.F_REV:  // prepare return value
+        {
+          // F_REV is just alike assign
+        }
+        break;
       case QuadrupleOperator.F_RET:  // function return (control of flow)
+        {
+          this.pc = this.stack[this.frameBase + getPrimitiveSize(PrimitiveType.INT)];
+          this.frameBase = this.stack[this.frameBase];
+        }
+        break;
       case QuadrupleOperator.F_VAL:  // bind return value of function to temp
         break;
       // heap memory management
@@ -155,6 +193,7 @@ export class Executor {
   public reset() {
     this.pc = 1;
     this.frameBase = 0;
+    this.stackTop = 0;
     this.heapTop = HEAP_BASE;
     this.heap = [];
     this.stack = [];

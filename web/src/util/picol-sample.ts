@@ -1,6 +1,6 @@
 const defaultSample =  `// Default Sample
 // Feel free to explore the World of Picol
-int main () {
+int main (int v1, int v2) {
   // Declare an matrix of matrix
   float[2,2][2,2] a;
   int i := 0, j := 100;
@@ -12,7 +12,10 @@ int main () {
       j := j + i;
     }
   }
-}`;
+}
+
+main(1, 2);
+`;
 
 const completeSample = `// Complete Sample
 // This sample tries to cover every language features in one file
@@ -111,7 +114,7 @@ const picolSample: {
   default: string;
   [sampleName: string]: string;
 } = {
-  default: stackSample,
+  default: defaultSample,
   defaultSample,
   completeSample,
   functionSample,

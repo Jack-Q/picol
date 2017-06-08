@@ -121,6 +121,10 @@ export class GeneratorContext {
   private breakChain: number[] = [];
   private continueChain: number[] = [];
 
+  public get currentHeapTop(): number {
+    return this.currentContext.stackPointer;
+  }
+
   public get currentContext(): ExecutionContext {
     return this.contextStack[this.contextStack.length - 1];
   }
