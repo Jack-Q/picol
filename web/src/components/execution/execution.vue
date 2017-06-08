@@ -2,6 +2,7 @@
   <div class="executor-root" v-if="program">
     <div class="col statue-col">
       PC: {{executor.pc}}
+      FrameBase: {{executor.frameBase}}
       <div>
         <ui-button @click="step">Step</ui-button>
         <ui-button @click="reset">Reset</ui-button>

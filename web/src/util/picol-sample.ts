@@ -110,6 +110,19 @@ int funct(){
 }
 `;
 
+const fact = `// recursive factorial calculation
+int b;
+
+int fact(int a){
+    if(a == 0){
+        return 1;
+    }
+    return a * fact(a - 1);
+}
+
+b := fact(10);
+`;
+
 const picolSample: {
   default: string;
   [sampleName: string]: string;
@@ -119,6 +132,7 @@ const picolSample: {
   completeSample,
   functionSample,
   stackSample,
+  fact,
 };
 
 export default picolSample;

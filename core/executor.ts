@@ -136,7 +136,7 @@ export class Executor {
           // F_PARA VAL _ ADDR
           const value = this.getValue(quad.argument1);
           const target = this.getValue((quad.result as QuadrupleArgArrayAddr).offset);
-          this.stackFill(this.frameBase + target.value, value);
+          this.stackFill(target.value, value);
         }
         break;
       case QuadrupleOperator.F_FUNC: // call procedural (control of flow)
@@ -170,6 +170,11 @@ export class Executor {
         }
         break;
       case QuadrupleOperator.F_VAL:  // bind return value of function to temp
+        {
+          const val1 = this.getValue(quad.argument1);
+          const target = quad.result as QuadrupleArgVarTemp;
+          this.temp[target.tempIndex] = val1.value;
+        }
         break;
       // heap memory management
       case QuadrupleOperator.M_REQ:  // request allocation of heap memory
@@ -207,7 +212,7 @@ export class Executor {
     this.console.push({ message, severity });
   }
   private stackFill(addr: number, val: IExecutionVal) {
-    if (addr > HEAP_BASE) {
+    if (addr >= HEAP_BASE) {
       // assign to heap
       this.heap[addr - HEAP_BASE] = val.value;
       for (let i = 1; i < val.span; i++) {
@@ -241,10 +246,11 @@ export class Executor {
     // read stack in array style
     if (arg.type === QuadrupleArgType.ARRAY_ADDR) {
       const valInst = arg as QuadrupleArgArrayAddr;
-      const base = (valInst.base as QuadrupleArgTableRef).index;
+      const base = valInst.base.type === QuadrupleArgType.TABLE_REF
+        ? (valInst.base as QuadrupleArgTableRef).index : this.getValue(valInst.base).value;
       const offset = this.getValue(valInst.offset).value;
       console.log(base, offset);
-      if (offset > HEAP_BASE) {
+      if (base >= HEAP_BASE) {
         return {value: this.heap[base + offset - HEAP_BASE], span: 1}; // TODO: variable size span
       } else {
         return {value: this.stack[this.frameBase + base + offset], span: 1}; // TODO: variable size span

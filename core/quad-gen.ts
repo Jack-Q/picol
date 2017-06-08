@@ -291,12 +291,13 @@ const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
 
   // retrieve return value into temporary variable
   const temp = ctx.getTempVar();
-  ctx.addQuadruple(QuadrupleOperator.V_ASS, returnVal, Q_NULL, temp);
+  ctx.addQuadruple(QuadrupleOperator.F_VAL, returnVal, Q_NULL, temp);
   return new AttrExpr(temp);
 };
 
 const generateExpressionArrAccess: generateRule<AttrExpr> = (ctx, node) => {
   const id = node.children[0].value;
+  const arrayInfo = ctx.getEntryInfo(id);
 
   // assert the compatibility of size
 
@@ -324,7 +325,7 @@ const generateExpressionArrAccess: generateRule<AttrExpr> = (ctx, node) => {
   }
 
   const totalOffset = ctx.getTempVar();
-  const elementSize = 1; // TODO: get size by element type
+  const elementSize = arrayInfo.asArr.elementSize;
   ctx.addQuadruple(QuadrupleOperator.I_MUL, addrOffset, new QuadrupleArgValue(PrimitiveType.INT, elementSize),
     totalOffset, 'calc total size');
 
@@ -388,7 +389,7 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
 
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
-      ctx.addQuadruple(QuadrupleOperator.A_ASS,
+      ctx.addQuadruple(QuadrupleOperator.V_ASS,
         new QuadrupleArgValue(PrimitiveType.INT, 0),
         Q_NULL,
         ref,
