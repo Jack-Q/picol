@@ -10,7 +10,7 @@ var cssLoaders = utils.cssLoaders({
 });
 
 var loaders = Object.assign({
-  ts: 'vue-ts-loader',
+  ts: ['babel-loader', 'vue-ts-loader'],
 }, cssLoaders);
 module.exports = {
   esModule: true,
