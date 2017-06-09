@@ -1,3 +1,4 @@
+import { buildInFunctions } from './build-in';
 import { GeneratorError } from './error';
 import {
   Quadruple, QuadrupleArg, QuadrupleArgQuadRef, QuadrupleArgTableRef,
@@ -289,17 +290,14 @@ export class GeneratorContext {
     const global = new ExecutionContext(undefined, 'default global');
     this.contextStack.push(global);
 
-    // global function
-    this.addEntry.func('show');
-    const show = this.getEntryInfo('show').asFunc;
-    show.returnType = createValueType.void();
-    show.entryAddress = -10;
-    show.parameterList.push({ name: 'ch', type: createValueType.prim(PrimitiveType.CHAR) });
-
-    this.addEntry.func('showInt');
-    const showInt = this.getEntryInfo('showInt').asFunc;
-    showInt.entryAddress = -11;
-    showInt.returnType = createValueType.void();
-    showInt.parameterList.push({ name: 'num', type: createValueType.prim(PrimitiveType.INT) });
+    // register build-in functions to global context
+    buildInFunctions.map((func) => {
+      this.addEntry.func(func.name);
+      const funcEntry = this.getEntryInfo(func.name).asFunc;
+      funcEntry.returnType = func.return;
+      funcEntry.entryAddress = func.id;
+      funcEntry.parameterList = func.parameters;
+    });
   }
+
 }

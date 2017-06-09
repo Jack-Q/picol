@@ -1,3 +1,4 @@
+import { buildInFunctions } from './build-in';
 import { ErrorSeverity } from './error';
 import {
   Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgQuadRef, QuadrupleArgTableRef,
@@ -38,6 +39,10 @@ export class Executor {
   }
 
   public step() {
+    if (this.pc < 0) {
+      // build in function invocation
+      this.invokeBuildIn();
+    }
     // read quadruple
     const quad = this.program[this.pc - 1];
     if (!quad) {
@@ -297,5 +302,33 @@ export class Executor {
     this.heapTop += size;
     this.pushMsg('allocate heap from ' + baseAddress + ' to ' + this.heapTop + ' of size ' + size);
     return baseAddress;
+  }
+
+  private invokeBuildIn() {
+    const id = this.pc; // use program counter (negative) for entry point of build in function
+    const func = buildInFunctions.find((f) => f.id === this.pc);
+    if (!func) {
+      this.pushError('undefined build in function invocation', ErrorSeverity.FATAL);
+      return;
+    }
+
+    const params: any[] = [];
+    func.parameters.reduce((position, para) => {
+      params.push(this.stack[position]);
+      return position + para.type.size;
+    }, this.frameBase + 2 * getPrimitiveSize(PrimitiveType.INT));
+    const result = this.executeBuildIn(func.name, params);
+
+    // return
+    this.pc = this.stack[this.frameBase + getPrimitiveSize(PrimitiveType.INT)];
+    this.frameBase = this.stack[this.frameBase];
+  }
+
+  private executeBuildIn(name: string, param: any[]) {
+    const buildInImpl: { [name: string]: (...arg: any[]) => any } = {
+      show: (ch: string) => this.pushMsg(ch, ErrorSeverity.INFO),
+      showInt: (int: number) => this.pushMsg(int + '', ErrorSeverity.INFO),
+    };
+    return buildInImpl[name](...param);
   }
 }

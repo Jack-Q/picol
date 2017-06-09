@@ -1,5 +1,10 @@
 import { PrimitiveType } from './token';
 
+export interface IFunctionParameter {
+  name: string;
+  type: ValueTypeInfo;
+}
+
 export enum SymbolEntryType {
   VOID, PRIMITIVE, ARRAY, ARRAY_REF, FUNCTION,
 }
@@ -99,11 +104,6 @@ class TypeInfoArrayRef extends ValueTypeInfo {
   public toString() {
     return 'Ref[<' + PrimitiveType[this.primitiveType] + '>]';
   }
-}
-
-interface IFunctionParameter {
-  name: string;
-  type: ValueTypeInfo;
 }
 
 class TypeInfoFunction extends SymbolEntryInfo {
