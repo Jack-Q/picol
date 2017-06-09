@@ -1,6 +1,53 @@
 <template>
-  <div class="root" v-if="contextTree">
-    <pre>{{dump()}}</pre>
+  <div class="root" v-if="contextTree" :class="{open: open}">
+    <div ref="context-title" class="context-title" @click="open = !open">
+      <ui-ripple-ink trigger="context-title" ></ui-ripple-ink>
+      <div v-if="contextTree.name" >
+        {{contextTree.name}}
+      </div>
+      <div v-else>
+        <i>unnamed</i>
+      </div>
+    </div>
+    <div class="context-body">
+      <div v-if="isEmpty(contextTree.nameTable)" class="variable-list">
+        <div v-for="(n,i) in contextTree.nameTable" class="variable">
+          <pre class="name">{{i}}</pre> 
+          <span v-if="n.typeString == 'PRIMITIVE'" class="variable-type primitive">
+            <pre>{{n.info.toString()}}</pre>
+            <div class="stack-offset">{{n.stackOffset}}</div>
+          </span>
+          <span v-else-if="n.typeString == 'VOID'" class="variable-type void">
+            <pre>{{n.info.toString()}}</pre>
+          </span>
+          <span v-else-if="n.typeString == 'ARRAY'" class="variable-type array">
+            <pre>{{n.info.toString()}}</pre>
+            <div class="stack-offset">{{n.stackOffset}}</div>
+            array
+          </span>
+          <span v-else-if="n.typeString == 'ARRAY_REF'" class="variable-type array-ref">
+            <pre>{{n.info.toString()}}</pre>
+            <div class="stack-offset">{{n.stackOffset}}</div>
+            reference to array
+          </span>
+          <span v-else-if="n.typeString == 'FUNCTION'" class="variable-type function">
+            <pre>{{n.info.toString()}}</pre>
+            Address: {{n.info.entryAddress}}
+          </span>
+          <span v-else class="variable-type">
+            <pre>{{n.info.toString()}}</pre>
+          </span>
+        </div>
+      </div>
+      <div v-else>
+        No symbol defined in this context
+      </div>
+      <div class="nested-context">
+        <context-tree 
+          v-for="tree in contextTree.children" 
+          :contextTree="tree"/>
+      </div>
+    </div>
   </div>
   <div v-else>
     No context
@@ -15,17 +62,14 @@ import { Quadruple } from '../../../../core/main';
 @Component({
   name: 'context-tree',
   components: {
-  }
+  },
+
 })
 export default class ContextTree extends Vue {
   @Prop contextTree = p({type: Object})
-
-  dump() {
-    try{
-      return (this.contextTree as any).dump();
-    } catch(e){
-      return e.message;
-    }
+  open = true;
+  isEmpty(object: Object): boolean {
+    return Object.keys(object).filter(k => k !== '__ob__').length > 0;
   }
 }
 </script>
@@ -33,12 +77,77 @@ export default class ContextTree extends Vue {
 <style scoped>
   .root{
     flex: 1;
+    position: relative;
+    overflow: hidden;
+    max-height: 45px;
+    transition: all ease 400ms;
+  }
+  .root:hover {
+    background: rgba(180,230,255,0.15);
+  }
+  .context-title{
+    cursor: pointer;
+    height: 45px;
+    line-height: 45px;
+    background: #eee;
+    padding: 0 20px;
+    position: relative;
+  }
+  .variable{
+    padding: 5px 0;
+    position: relative;
+  }
+  .stack-offset {
+    position: absolute;
+    left: -20px;
+    top: 5px;
+    height: 25px;
+    width: 25px;
+    line-height: 25px;
+    background: #eee;
+    text-align: center;
+    font-size: 0.8em;
+    border-radius: 13px;
+    z-index: 10;
+  }
+  .variable-type{
+    display: inline-block;
   }
   pre{
-    overflow-x: auto;
-    height: 100%;
-    width: 100%;
     margin: 0;
-    font-size: 12px;
+    min-width: 65px;
+    padding: 0 5px;
+    text-align: center;
+    border-radius: 5px;
+    display: inline-block;
+  }
+  pre.name {
+    background: #fed;
+  }
+  .context-body{
+    position: relative;
+    padding-left: 20px;
+    transition: all ease 400ms;
+    max-height: 0px;
+    overflow-y: auto;
+    opacity: 0;
+  }
+  .context-body::before{
+    content: '';
+    position: absolute;
+    display: block;
+    height: 100%;
+    left: 8px;
+    top: 0;
+    z-index: 1;
+    border-left: dashed 2px #ccc;
+  }
+  .root.open{
+    max-height: 100vh;
+  }
+  .root.open .context-body {
+    padding: 10px 0 20px 20px;
+    opacity: 1;
+    max-height: calc(100% - 45px);
   }
 </style>

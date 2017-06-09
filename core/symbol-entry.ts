@@ -152,9 +152,16 @@ export class SymbolEntry {
     return this.info as TypeInfoArrayRef;
   }
 
+  public get typeString(): string{
+    return SymbolEntryType[this.type];
+  }
+
   public toString() {
     return this.name + '\t' + SymbolEntryType[this.type] + ' '
-      + this.info.toString() + ' @' + this.stackOffset;
+      + this.info.toString() +
+      (this.type === SymbolEntryType.FUNCTION ?
+        '@' + this.asFunc.entryAddress
+        : ' @' + this.stackOffset);
   }
 }
 
