@@ -21,4 +21,16 @@ export const buildInFunctions: IBuildInFunction[] = [{
   description: 'print integer to console',
   parameters: [{ name: 'num', type: createValueType.prim(PrimitiveType.INT) }],
   return: createValueType.void(),
+}, {
+  id: -12,
+  name: 'getInt',
+  description: 'get an integer from user',
+  parameters: [],
+  return: createValueType.prim(PrimitiveType.CHAR),
+}, {
+  id: -13,
+  name: 'getChar',
+  description: 'get an character from user',
+  parameters: [],
+  return: createValueType.prim(PrimitiveType.INT),
 }];

@@ -316,8 +316,16 @@ export class Executor {
     func.parameters.reduce((position, para) => {
       params.push(this.stack[position]);
       return position + para.type.size;
-    }, this.frameBase + 2 * getPrimitiveSize(PrimitiveType.INT));
+    }, this.frameBase + 2 * getPrimitiveSize(PrimitiveType.INT) + func.return.size);
     const result = this.executeBuildIn(func.name, params);
+
+    // assign return value
+    if (!func.return.isVoid) {
+      this.stackFill(2 * getPrimitiveSize(PrimitiveType.INT), {
+        value: result,
+        span: func.return.size,
+      });
+    }
 
     // return
     this.pc = this.stack[this.frameBase + getPrimitiveSize(PrimitiveType.INT)];
@@ -328,6 +336,14 @@ export class Executor {
     const buildInImpl: { [name: string]: (...arg: any[]) => any } = {
       show: (ch: string) => this.pushMsg(ch, ErrorSeverity.INFO),
       showInt: (int: number) => this.pushMsg(int + '', ErrorSeverity.INFO),
+      getChar: () => {
+        // TODO: async build in function invocation
+        return 't';
+      },
+      getInt: () => {
+        // TODO: async build in function invocation
+        return 1023;
+      },
     };
     return buildInImpl[name](...param);
   }

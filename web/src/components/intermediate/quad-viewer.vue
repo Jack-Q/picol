@@ -91,6 +91,7 @@ export default class QuadViewer extends Vue {
   font-size: 0.8em;
   text-align: center;
   min-width: 35%;
+  letter-spacing: -1px;
 }
 
 .quadruple-item:hover .comment{

@@ -20,32 +20,33 @@
         </div>
       </div>
     </div>
-    <div class="col temp-col">
-      <div class="section-header">Temp</div>
-      <div class="memory-view">
-        <div v-for="(c, i) in executor.temp" class="memory-view-row">
-          <div class="index">{{i}}</div>
-          <div class="value">{{c}}</div> 
-        </div>
-      </div>
-    </div>
-    <div class="col stack-col">
-      <div class="section-header">Stack</div>
-      <div class="memory-view">
-        <div v-for="(c, i) in executor.stack" class="memory-view-row">
-          <div class="index">{{i}}</div>
-          <div class="value">{{c}}</div> 
-        </div>
-      </div>
-    </div>
-    <div class="col heap-col">
-      <div class="section-header">Heap</div>
-      <div class="memory-view">
-        <div v-for="(c, i) in executor.heap" class="memory-view-row">
-          <div class="index">{{i}}</div>
-          <div class="value">{{c}}</div> 
-        </div>
-      </div>
+    <div class="col">
+      <ui-tabs>
+        <ui-tab title="temp">
+          <div class="memory-view">
+            <div v-for="(c, i) in executor.temp" class="memory-view-row">
+              <div class="index">{{i}}</div>
+              <div class="value">{{c}}</div> 
+            </div>
+          </div>
+        </ui-tab>
+        <ui-tab title="stack">
+          <div class="memory-view">
+            <div v-for="(c, i) in executor.stack" class="memory-view-row">
+              <div class="index">{{i}}</div>
+              <div class="value">{{c}}</div> 
+            </div>
+          </div>
+        </ui-tab>
+        <ui-tab title="heap">
+          <div class="memory-view">
+            <div v-for="(c, i) in executor.heap" class="memory-view-row">
+              <div class="index">{{i}}</div>
+              <div class="value">{{c}}</div> 
+            </div>
+          </div>
+        </ui-tab>
+      </ui-tabs>
     </div>
     <div class="program">
       <quad-viewer :quadList="program" :highlight="executor.pc" />
@@ -166,5 +167,8 @@ export default class Execution extends Vue {
   }
   .memory-view-row .value{
     flex: 1;
+  }
+  .program{
+    min-width: 280px;
   }
 </style>

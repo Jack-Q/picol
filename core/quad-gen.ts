@@ -64,9 +64,9 @@ class AttrExpr implements IAttr {
     this.trueChain = nxq;
     this.falseChain = nxq + 1;
     ctx.addQuadruple(QuadrupleOperator.J_NEZ, this.value, Q_NULL, new QuadrupleArgQuadRef(0),
-      'convert value to boolean: value is not zero (truly)');
+      'convert value to boolean: value is truly');
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0),
-      'convert value to boolean: value is zero (falsy)');
+      'convert value to boolean: value is falsy');
   }
 
   // convert boolean chain to value
