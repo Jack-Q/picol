@@ -83,7 +83,7 @@ export default class ContextTree extends Vue {
     transition: all ease 400ms;
   }
   .root:hover {
-    background: rgba(180,230,255,0.15);
+    background: rgba(180,230,255,0.1);
   }
   .context-title{
     cursor: pointer;
