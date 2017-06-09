@@ -39,6 +39,7 @@ module.exports = {
         exclude: /node_modules|vue\/src/,
         use: [{
           loader: 'babel-loader',
+          options: {presets: ['env']}
         },{
           loader: 'ts-loader',
           options: {
