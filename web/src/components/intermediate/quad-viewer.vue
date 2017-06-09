@@ -1,7 +1,7 @@
 <template>
   <div class="root">
     <div v-if="quadruples.length" class="list">
-      <div v-for="q in quadruples" class="quadruple-item">
+      <div v-for="q in quadruples" class="quadruple-item" :class="{highlight: q.i + 1 === highlight}">
         <div class="quad-index">{{q.i + 1}}</div>
         <div class="quad-op">{{q.op}}</div>
         <div class="quad-arg">{{q.a1}}</div>
@@ -25,6 +25,7 @@ import { Quadruple } from '../../../../core/main';
 })
 export default class QuadViewer extends Vue {
   @Prop quadList = p({type: Array})
+  @Prop highlight = p({type: Number})
 
   @Lifecycle mounted() { 
 
@@ -64,6 +65,9 @@ export default class QuadViewer extends Vue {
   font-size: 16px;
   background: #efefef;
   transition: all ease 400ms;
+}
+.quadruple-item.highlight {
+  background: #bfffca;
 }
 .quadruple-item:hover {
   background: #fafaff;

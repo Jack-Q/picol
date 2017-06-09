@@ -21,8 +21,8 @@
       </div>
     </div>
     <div class="col temp-col">
-      Temp
-      <div>
+      <div class="section-header">Temp</div>
+      <div class="memory-view">
         <div v-for="(c, i) in executor.temp" class="memory-view-row">
           <div class="index">{{i}}</div>
           <div class="value">{{c}}</div> 
@@ -30,8 +30,8 @@
       </div>
     </div>
     <div class="col stack-col">
-      Stack
-      <div>
+      <div class="section-header">Stack</div>
+      <div class="memory-view">
         <div v-for="(c, i) in executor.stack" class="memory-view-row">
           <div class="index">{{i}}</div>
           <div class="value">{{c}}</div> 
@@ -39,8 +39,8 @@
       </div>
     </div>
     <div class="col heap-col">
-      Heap
-      <div>
+      <div class="section-header">Heap</div>
+      <div class="memory-view">
         <div v-for="(c, i) in executor.heap" class="memory-view-row">
           <div class="index">{{i}}</div>
           <div class="value">{{c}}</div> 
@@ -48,7 +48,7 @@
       </div>
     </div>
     <div class="program">
-      <quad-viewer :quadList="program" />
+      <quad-viewer :quadList="program" :highlight="executor.pc" />
     </div>
   </div>
   <div v-else>
@@ -147,6 +147,14 @@ export default class Execution extends Vue {
     position: relative;
   }
   .console{
+    overflow-y: auto;
+  }
+
+  .section-header {
+     
+  }
+  .memory-view {
+    flex: 1;
     overflow-y: auto;
   }
   .memory-view-row{
