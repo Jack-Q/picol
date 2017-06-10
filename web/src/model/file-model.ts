@@ -5,6 +5,7 @@ import sampleList from '../util/picol-sample';
 export interface IEditingFile {
   name: string;
   savedSrc: string;
+  version: number;
   src: string;
   model?: monaco.editor.IModel;
 }
@@ -14,7 +15,7 @@ class FileModel {
   public fileList: IEditingFile[] = [];
 
   public get templateList(): string[] {
-    return Object.keys(sampleList);
+    return Object.keys(sampleList).filter( (k) => k !== 'default');
   }
 
   public get currentFile(): IEditingFile {
@@ -43,7 +44,7 @@ class FileModel {
       window.localStorage.setItem('file-model', JSON.stringify(this.fileList.map((f) => ({
         name: f.name, savedSrc: f.savedSrc, src: f.src,
       }))));
-    }, 500);
+    }, 100);
   }
 
   public addNew() {
@@ -51,7 +52,7 @@ class FileModel {
     for (let i = 1; true; i++) {
       const file = 'file-' + i;
       if (this.fileList.every((f) => f.name !== file)) {
-        this.fileList.push({ name: file, savedSrc: src, src});
+        this.fileList.push({ name: file, savedSrc: src, src, version: 0});
         this.current = this.fileList.length - 1;
         if ((window as any).monaco) {
           this.currentFile.model = monaco.editor.createModel(this.currentFile.src, 'Picol');
@@ -74,7 +75,16 @@ class FileModel {
 
   public saveFile(f: IEditingFile): void {
     f.savedSrc = f.src;
+    f.version++;
   }
+
+  public reload(f: IEditingFile): void {
+    f.src = f.savedSrc;
+    if (f.model) {
+      f.model.setValue(f.src);
+    }
+  }
+
   public deleteFile(f: IEditingFile): void {
     const index = this.fileList.indexOf(f);
     this.fileList.splice(index, 1);
@@ -93,7 +103,7 @@ class FileModel {
   }
 
   public loadTemplate(template: string) {
-    if (this.currentFile.savedSrc === this.currentFile.src) {
+    if (this.currentFile.savedSrc === this.currentFile.src && this.currentFile.version === 0) {
       // no file change, apply template to current file
     } else {
       this.addNew();

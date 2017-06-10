@@ -118,12 +118,15 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
 })
 export default class Index extends Vue {
   editor: monaco.editor.ICodeEditor;
-  code = MonacoTokenizer.picolSample.default
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
   ast: ParseNode|null = null
   quadrupleTable: Quadruple[] = []
   errorList: PicolError[] = [];
   contextTree: ExecutionContext|null = null
+
+  get code(): string {
+    return fileModel.currentFile.src;
+  }
 
   editorMounted(editor: monaco.editor.ICodeEditor) {
     this.editor = editor;
@@ -145,13 +148,15 @@ export default class Index extends Vue {
 
   editorCodeChange(editor: monaco.editor.ICodeEditor){
     const model = editor.getModel();
-    this.code = model.getValue();
-    fileModel.currentFile.src = this.code;
-    const tokenList = Array.from(core.lexer(this.code));
-    const lexerMarkers: monaco.editor.IMarkerData[] = [];
+    const code = model.getValue();
+    fileModel.currentFile.src = code;
+
+    // clear last error
     this.errorList = [];
 
     // Lexer
+    const lexerMarkers: monaco.editor.IMarkerData[] = [];
+    const tokenList = Array.from(core.lexer(code));
     tokenList.map((t)=>{
       if(t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE){
         this.errorList.push(PicolError.lexerError('unknown token', t));

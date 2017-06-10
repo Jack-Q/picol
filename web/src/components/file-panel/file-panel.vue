@@ -26,6 +26,9 @@
               {{f.src !== f.savedSrc ? '*' : ''}}
             </div>
             <div class="inline-actions">
+              <div class="inline-action" @click.stop="model.reload(f)">
+                <ui-icon>settings_backup_restore</ui-icon>
+              </div>
               <div class="inline-action" @click.stop="model.saveFile(f)">
                 <ui-icon>save</ui-icon>
               </div>

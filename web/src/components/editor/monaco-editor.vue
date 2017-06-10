@@ -1,5 +1,6 @@
 <template>
-  <div :style="style"></div>
+  <div v-if="loaded" :style="style" ref="editor"></div>
+  <div v-else class="loading">Loading Code Editor</div>
 </template>
 
 <script lang='ts'>
@@ -37,6 +38,7 @@ export default class MonacoEditor extends Vue {
   editor: monaco.editor.ICodeEditor
   monaco: any
   codeChangeEmitter: any
+  loaded: boolean = false
 
   get style() {
     const { width, height } = this;
@@ -101,6 +103,8 @@ export default class MonacoEditor extends Vue {
   }
 
   createMonaco() {
+    this.loaded = true;
+  
     const global: any = window;
     this.monaco = global.monaco;
     this.editor = global.monaco.editor.create(this.$el, this.editorOptions);
@@ -117,3 +121,15 @@ export default class MonacoEditor extends Vue {
   }
 }
 </script>
+
+<style scoped>
+.loading {
+  text-align: center;
+  padding: 20% 30px 0;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  font-size: 3em;
+  color: #ddd;
+}
+</style>
