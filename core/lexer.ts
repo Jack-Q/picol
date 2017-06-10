@@ -204,4 +204,6 @@ export const lexer = function*(source: string, option: ILexerOption = defaultOpt
       // throw new LexerError(`invalid token '${ch}'`, pos);
     }
   }
+  // eventually, append an EOF at the end of the token list
+  yield new Token(TokenType.EOF, '', pos);
 };

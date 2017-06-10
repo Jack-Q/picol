@@ -1,4 +1,4 @@
-import { PrimitiveType, TokenType } from './token';
+import { PrimitiveType, Token, TokenType } from './token';
 
 export enum ParseOperatorType {
   NO_OP,       // invalid
@@ -155,91 +155,96 @@ export enum ParseNodeType {
 }
 
 export class ParseNode {
-  public static createIdentifier(identifier: string) {
-    return new ParseNode(ParseNodeType.VAL_IDENTIFIER, identifier);
+  public static createIdentifier(identifier: string, token: Token | undefined) {
+    return new ParseNode(ParseNodeType.VAL_IDENTIFIER, token, identifier);
   }
 
-  public static createDeclarationPrimitive(declareType: ParseNode, declareList: ParseNode) {
-    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_PRIM);
+  public static createDeclarationPrimitive(declareType: ParseNode, declareList: ParseNode, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_PRIM, token);
     node.addChild(declareType);
     node.addChild(declareList);
     return node;
   }
 
-  public static createDeclarationArrayRef(declareType: ParseNode, declareList: ParseNode) {
-    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_ARR_REF);
+  public static createDeclarationArrayRef(declareType: ParseNode, declareList: ParseNode, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_ARR_REF, token);
     node.addChild(declareType);
     node.addChild(declareList);
     return node;
   }
 
-  public static createDeclarationArray(declareType: ParseNode, identifier: ParseNode) {
-    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_ARR);
+  public static createDeclarationArray(declareType: ParseNode, identifier: ParseNode, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.STAT_DECLARATION_ARR, token);
     node.addChild(declareType);
     node.addChild(identifier);
     return node;
   }
 
-  public static createDeclarationList(declareItems: ParseNode[]) {
-    const node = new ParseNode(ParseNodeType.SEG_DECLARATION_LIST);
+  public static createDeclarationList(declareItems: ParseNode[], token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.SEG_DECLARATION_LIST, token);
     declareItems.map((i) => node.addChild(i));
     return node;
   }
 
-  public static createDeclarationItem(identifier: ParseNode, expression?: ParseNode) {
-    const node = new ParseNode(ParseNodeType.SEG_DECLARATION_ITEM);
+  public static createDeclarationItem(identifier: ParseNode,
+                                      expression: ParseNode | undefined,
+                                      token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.SEG_DECLARATION_ITEM, token);
     if (!expression) {
-      expression = new ParseNode(ParseNodeType.VAL_UNINITIALIZED);
+      expression = new ParseNode(ParseNodeType.VAL_UNINITIALIZED, token);
     }
     node.addChild(identifier);
     node.addChild(expression);
     return node;
   }
 
-  public static createPrimitiveType(type: PrimitiveType) {
-    return new ParseNode(ParseNodeType.TYPE_PRIMITIVE, type);
+  public static createPrimitiveType(type: PrimitiveType, token: Token | undefined) {
+    return new ParseNode(ParseNodeType.TYPE_PRIMITIVE, token, type);
   }
 
-  public static createArrayType(elementType: ParseNode, dimension: ParseNode) {
-    const node = new ParseNode(ParseNodeType.TYPE_ARRAY);
+  public static createArrayType(elementType: ParseNode, dimension: ParseNode, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.TYPE_ARRAY, token);
     node.addChild(elementType);
     node.addChild(dimension);
     return node;
   }
 
-  public static createArrayRefType(elementType: ParseNode, dimension: number) {
-    const node = new ParseNode(ParseNodeType.TYPE_ARRAY_REF);
+  public static createArrayRefType(elementType: ParseNode, dimension: number, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.TYPE_ARRAY_REF, token);
     node.addChild(elementType);
     node.value = dimension;
     return node;
   }
-  public static createArrayAccess(id: ParseNode, dimension: ParseNode) {
-    const node = new ParseNode(ParseNodeType.EXPR_ARR_ACCESS);
+  public static createArrayAccess(id: ParseNode, dimension: ParseNode, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.EXPR_ARR_ACCESS, token);
     node.addChild(id);
     node.addChild(dimension);
     return node;
   }
 
-  public static createExprConstantInt(value: number) {
-    return new ParseNode(ParseNodeType.VAL_CONSTANT_INT, value);
+  public static createExprConstantInt(value: number, token: Token | undefined) {
+    return new ParseNode(ParseNodeType.VAL_CONSTANT_INT, token, value);
   }
-  public static createExprConstantFloat(value: number) {
-    return new ParseNode(ParseNodeType.VAL_CONSTANT_FLOAT, value);
+  public static createExprConstantFloat(value: number, token: Token | undefined) {
+    return new ParseNode(ParseNodeType.VAL_CONSTANT_FLOAT, token, value);
   }
-  public static createExprConstantBool(value: boolean) {
-    return new ParseNode(ParseNodeType.VAL_CONSTANT_BOOL, value);
+  public static createExprConstantBool(value: boolean, token: Token | undefined) {
+    return new ParseNode(ParseNodeType.VAL_CONSTANT_BOOL, token, value);
   }
-  public static createExprConstantChar(value: string) {
-    return new ParseNode(ParseNodeType.VAL_CONSTANT_CHAR, value);
+  public static createExprConstantChar(value: string, token: Token | undefined) {
+    return new ParseNode(ParseNodeType.VAL_CONSTANT_CHAR, token, value);
   }
 
-  public static createExprUnary(op: ParseOperatorType, expr: ParseNode) {
-    const node = new ParseNode(ParseNodeType.EXPR_UNI, op);
+  public static createExprUnary(op: ParseOperatorType, expr: ParseNode, token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.EXPR_UNI, token, op);
     node.addChild(expr);
     return node;
   }
-  public static createExprBinary(op: ParseOperatorType, exprLeft: ParseNode, exprRight: ParseNode) {
-    const node = new ParseNode(ParseNodeType.EXPR_BIN, op);
+  public static createExprBinary(op: ParseOperatorType,
+                                 exprLeft: ParseNode,
+                                 exprRight: ParseNode,
+                                 token: Token | undefined) {
+    const node = new ParseNode(ParseNodeType.EXPR_BIN, token, op);
     node.addChild(exprLeft);
     node.addChild(exprRight);
     return node;
@@ -248,10 +253,12 @@ export class ParseNode {
   public type: ParseNodeType;
   public value: any;
   public children: ParseNode[] = [];
+  public token: Token | undefined;
 
-  constructor(type: ParseNodeType, value?: any) {
+  constructor(type: ParseNodeType, token: Token | undefined | undefined, value?: any) {
     this.type = type;
     this.value = value;
+    this.token = token;
   }
 
   public print = (indent: number = 2, depth: number = 0) => {

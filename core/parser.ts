@@ -11,13 +11,15 @@ export interface IParserResult {
 }
 
 interface ITokenSource {
-  get: () => Token | null;
-  peek: (i?: number) => Token | null;
-  adv: (i?: number) => Token | null;
+  get: () => Token;
+  peek: (i?: number) => Token;
+  adv: (i?: number) => Token;
   err: ErrorList;
 }
 
-type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode | null;
+const isEOF = (src: ITokenSource, peek: number = 0): boolean => src.peek(peek) && src.peek(peek).type === TokenType.EOF;
+
+type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode;
 
 // arr[a,b,c][a,b,c]
 // since there is no significant difference between
@@ -25,12 +27,13 @@ type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode | 
 // the separation of dimension group will be flatten during the compiling phase
 const parseExpressionArray: ParseFunc = (src, id) => {
   const t = src.get();
-  if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
-    return id || null;
+  if (t.type !== TokenType.DIM_L_BRACKET) {
+    return id;
   }
   const dim = parseArrayDimension(src);
-  if (dim === null) {
-    throw ParserError.expect('Array dimension', t);
+  if (dim.children.length === 0) {
+    src.err.error(ParserError.expect('Array dimension', t));
+    return ParseNode.createArrayAccess(id, dim, id.token);
   }
   if (id.type === ParseNodeType.EXPR_ARR_ACCESS) {
     // flatten array access
@@ -39,7 +42,7 @@ const parseExpressionArray: ParseFunc = (src, id) => {
     return parseExpressionArray(src, id);
   } else {
     // create new array access
-    const arrAccess = ParseNode.createArrayAccess(id, dim);
+    const arrAccess = ParseNode.createArrayAccess(id, dim, id.token);
     // use recursion here for array of array ...
     return parseExpressionArray(src, arrAccess);
   }
@@ -49,16 +52,18 @@ const parseExpressionArray: ParseFunc = (src, id) => {
 const parseExpressionInvoke: ParseFunc = (src, id) => {
   // id is processed, current cursor position ought to be placed at (
   const lParen = src.get();
-  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
-    throw ParserError.expect('(', lParen);
+  const invocation = new ParseNode(ParseNodeType.EXPR_FUNC_INVOKE, id.token);
+
+  if (lParen.type !== TokenType.DIM_L_PAREN) {
+    src.err.error(ParserError.expect('(', lParen));
+    return invocation;
   }
   src.adv();
-  const node = new ParseNode(ParseNodeType.SEG_INVOKE_ARG_LIST);
+  const node = new ParseNode(ParseNodeType.SEG_INVOKE_ARG_LIST, id.token);
   const emptyArgParen = src.get();
-  if (emptyArgParen !== null && emptyArgParen.type === TokenType.DIM_R_PAREN) {
+  if (emptyArgParen.type === TokenType.DIM_R_PAREN) {
     // empty parameter list
     src.adv();
-    const invocation = new ParseNode(ParseNodeType.EXPR_FUNC_INVOKE);
     invocation.addChild(id);
     invocation.addChild(node);
     return invocation;
@@ -67,69 +72,69 @@ const parseExpressionInvoke: ParseFunc = (src, id) => {
   while (true) {
     const exp = parseExpression(src);
     if (exp === null) {
-      throw ParserError.expect('dim expr', src.get());
+      src.err.error(ParserError.expect('dim expr', src.get()));
     }
     node.addChild(exp);
 
     const comma = src.get();
-    if (comma === null) {
-      throw ParserError.expect(') ,', comma);
-    }
     if (comma.type === TokenType.DIM_COMMA) {
       src.adv();
       continue;
     }
     if (comma.type === TokenType.DIM_R_PAREN) {
       src.adv();
-      const invocation = new ParseNode(ParseNodeType.EXPR_FUNC_INVOKE);
       invocation.addChild(id);
       invocation.addChild(node);
       return invocation;
     }
-    throw ParserError.expect(') ,', comma);
+    if (isEOF(src)) {
+      src.err.throw(ParserError.error('incomplete function invocation', comma));
+    }
+    // attempt to ignore current unknown token and continue parsing
+    src.err.error(ParserError.expect(') ,', comma));
+    src.adv();
   }
 };
 
 // i++, i--
 const parseExpressionPostUnary: ParseFunc = (src, expr) => {
   const next = src.get();
-  if (next !== null && next.type === TokenType.OP_INC_INC) {
+  if (next.type === TokenType.OP_INC_INC) {
     // increment
     src.adv();
-    return ParseNode.createExprUnary(ParseOperatorType.UNI_INC_POS, expr);
+    return ParseNode.createExprUnary(ParseOperatorType.UNI_INC_POS, expr, next);
   }
-  if (next !== null && next.type === TokenType.OP_INC_DEC) {
+  if (next.type === TokenType.OP_INC_DEC) {
     // decrement
     src.adv();
-    return ParseNode.createExprUnary(ParseOperatorType.UNI_DEC_POS, expr);
+    return ParseNode.createExprUnary(ParseOperatorType.UNI_DEC_POS, expr, next);
   }
   return expr;
 };
 
 // +a, -a, !a, ++a, --a, a++, a--, + + a, arr[a], a(1), (expr)...
 const parseExpressionUnit: ParseFunc = (src) => {
-  const handleUnary = (type: ParseOperatorType): ParseNode => {
+  const handleUnary = (type: ParseOperatorType, t: Token): ParseNode => {
     src.adv();
     const expr = parseExpressionUnit(src);
     if (expr === null) { throw ParserError.error('incomplete expression', src.get()); }
-    return ParseNode.createExprUnary(type, expr);
+    return ParseNode.createExprUnary(type, expr, t);
   };
 
   const t = src.get();
-  if (t === null) { return null; }
   switch (t.type) {
     case TokenType.VAL_NUM_INT:
       src.adv();
-      return ParseNode.createExprConstantInt(t.value);
+      return ParseNode.createExprConstantInt(t.value, t);
     case TokenType.VAL_NUM_FLOAT:
       src.adv();
-      return ParseNode.createExprConstantFloat(t.value);
+      return ParseNode.createExprConstantFloat(t.value, t);
     case TokenType.VAL_BOOL:
       src.adv();
-      return ParseNode.createExprConstantBool(t.value);
+      return ParseNode.createExprConstantBool(t.value, t);
     case TokenType.VAL_CHAR:
       src.adv();
-      return ParseNode.createExprConstantChar(t.value);
+      return ParseNode.createExprConstantChar(t.value, t);
     case TokenType.DIM_L_PAREN:
       src.adv();
       const subExpr = parseExpression(src);
@@ -146,7 +151,7 @@ const parseExpressionUnit: ParseFunc = (src) => {
       // ((i))++ is a valid expression
       return parseExpressionPostUnary(src, subExpr);
     case TokenType.ID_NAME:
-      const id = ParseNode.createIdentifier(t.value);
+      const id = ParseNode.createIdentifier(t.value, t);
       const next = src.adv();
       if (next !== null && next.type === TokenType.DIM_L_BRACKET) {
         // handle array access
@@ -160,55 +165,63 @@ const parseExpressionUnit: ParseFunc = (src) => {
       }
       return id && parseExpressionPostUnary(src, id);
     case TokenType.OP_PLUS:
-      return handleUnary(ParseOperatorType.UNI_POSIT);
+      return handleUnary(ParseOperatorType.UNI_POSIT, t);
     case TokenType.OP_MINUS:
-      return handleUnary(ParseOperatorType.UNI_NEGATE);
+      return handleUnary(ParseOperatorType.UNI_NEGATE, t);
     case TokenType.OP_LOG_NOT:
-      return handleUnary(ParseOperatorType.UNI_NOT);
+      return handleUnary(ParseOperatorType.UNI_NOT, t);
     case TokenType.OP_INC_INC:
-      return handleUnary(ParseOperatorType.UNI_INC_PRE);
+      return handleUnary(ParseOperatorType.UNI_INC_PRE, t);
     case TokenType.OP_INC_DEC:
-      return handleUnary(ParseOperatorType.UNI_DEC_PRE);
+      return handleUnary(ParseOperatorType.UNI_DEC_PRE, t);
+    case TokenType.EOF:
+      src.err.throw(ParserError.error('incomplete expression', src.get()));
   }
-  return null;
+  // unknown node
+  src.err.error(ParserError.error('unknown token', src.get()));
+
+  // assume the token is a unintended input token, skip it and attempt this as expression
+  src.adv();
+  return parseExpressionUnit(src);
 };
 
 // helper function for determine operator priority
 const parseExpressionWeight =
-  (src: ITokenSource, weight: number, leftParam: ParseNode, initOp: ParseOperatorType): ParseNode => {
+  (src: ITokenSource, weight: number, leftParam: ParseNode,
+   initOp: ParseOperatorType, initOpToken: Token): ParseNode => {
   let leftExpr = leftParam;
   let currentOp = initOp;
+  let currentOpToken = initOpToken;
   let currentWeight = getOperatorPriority(initOp) + getOperatorAssociativity(initOp);
 
   while (true) {
     const expr = parseExpressionUnit(src);
-    if (expr === null) {
-      throw ParserError.expect('expression', src.get());
-    }
 
     let t: Token | null = null;
     t = src.get();
-    if (t === null || !TokenTypeUtil.isBinOperator(t.type)) {
-      return ParseNode.createExprBinary(currentOp, leftExpr, expr);
+    if (isEOF(src) || !TokenTypeUtil.isBinOperator(t.type)) {
+      return ParseNode.createExprBinary(currentOp, leftExpr, expr, currentOpToken);
     }
     const op = getBinaryParseOperator(t.type);
     const w = getOperatorPriority(op);
     if (w < weight) {
-      return ParseNode.createExprBinary(currentOp, leftExpr, expr);
+      return ParseNode.createExprBinary(currentOp, leftExpr, expr, currentOpToken);
     }
     src.adv();
     if (w < currentWeight) {
-      leftExpr = ParseNode.createExprBinary(currentOp, leftExpr, expr);
+      leftExpr = ParseNode.createExprBinary(currentOp, leftExpr, expr, currentOpToken);
       currentOp = op;
+      currentOpToken = t;
       currentWeight = w + getOperatorAssociativity(op);
     } else {
-      const updateExpr = parseExpressionWeight(src, currentWeight, expr, op);
-      leftExpr = ParseNode.createExprBinary(currentOp, leftExpr, updateExpr);
+      const updateExpr = parseExpressionWeight(src, currentWeight, expr, op, t);
+      leftExpr = ParseNode.createExprBinary(currentOp, leftExpr, updateExpr, currentOpToken);
       t = src.get();
-      if (t === null || !TokenTypeUtil.isBinOperator(t.type)) {
+      if (isEOF(src) || !TokenTypeUtil.isBinOperator(t.type)) {
         return leftExpr;
       }
       currentOp = getBinaryParseOperator(t.type);
+      currentOpToken = t;
       currentWeight = getOperatorPriority(currentOp);
       if (currentWeight < weight) {
         return leftExpr;
@@ -222,24 +235,22 @@ const parseExpressionWeight =
 // expression
 const parseExpression: ParseFunc = (src) => {
   const expr = parseExpressionUnit(src);
-  if (expr === null) {
-    throw ParserError.expect('expression', src.get());
-  }
+
   const t = src.get();
-  if (t === null) {
+  if (isEOF(src)) {
     throw ParserError.error('incomplete expression', t);
   }
   if (!TokenTypeUtil.isBinOperator(t.type)) {
     return expr;
   }
   src.adv();
-  return parseExpressionWeight(src, 0, expr, getBinaryParseOperator(t.type));
+  return parseExpressionWeight(src, 0, expr, getBinaryParseOperator(t.type), t);
 };
 
 // a[,,,]
 const parseArrayRefType: ParseFunc = (src, type) => {
   const t = src.get();
-  if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
+  if (t.type !== TokenType.DIM_L_BRACKET) {
     return type || null;
   }
   let dim = 1; // empty brackets is a reference to one dimension array: int[]
@@ -255,7 +266,7 @@ const parseArrayRefType: ParseFunc = (src, type) => {
         type.value += dim;
         return parseArrayRefType(src, type);
       } else {
-        const arrayRefType = ParseNode.createArrayRefType(type, dim);
+        const arrayRefType = ParseNode.createArrayRefType(type, dim, type.token);
         return parseArrayRefType(src, arrayRefType);
       }
     }
@@ -266,11 +277,11 @@ const parseArrayRefType: ParseFunc = (src, type) => {
 // [1,2,3]
 const parseArrayDimension: ParseFunc = (src) => {
   const lBracket = src.get();
-  if (lBracket === null || lBracket.type !== TokenType.DIM_L_BRACKET) {
+  if (lBracket.type !== TokenType.DIM_L_BRACKET) {
     throw ParserError.expect('[', lBracket);
   }
   src.adv();
-  const node = new ParseNode(ParseNodeType.SEG_ARRAY_DIM);
+  const node = new ParseNode(ParseNodeType.SEG_ARRAY_DIM, lBracket);
   while (true) {
     const exp = parseExpression(src);
     if (exp === null) {
@@ -297,7 +308,7 @@ const parseArrayDimension: ParseFunc = (src) => {
 // int[1,2,3]
 const parseArrayType: ParseFunc = (src, type) => {
   const t = src.get();
-  if (t === null || t.type !== TokenType.DIM_L_BRACKET) {
+  if (t.type !== TokenType.DIM_L_BRACKET) {
     return type || null;
   }
   const dim = parseArrayDimension(src);
@@ -309,7 +320,7 @@ const parseArrayType: ParseFunc = (src, type) => {
     type.children[1].children.push(...dim.children);
     return parseArrayType(src, type);
   } else {
-    const arrayType = ParseNode.createArrayType(type, dim);
+    const arrayType = ParseNode.createArrayType(type, dim, type.token);
 
     // use recursion here for array of array ...
     return parseArrayType(src, arrayType);
@@ -319,8 +330,8 @@ const parseArrayType: ParseFunc = (src, type) => {
 // int a(int m, int n){}
 const parseType: ParseFunc = (src) => {
   let t = src.get();
-  if (t === null || !TokenTypeUtil.isType(t.type)) { return null; }
-  const primType = ParseNode.createPrimitiveType(t.value as PrimitiveType);
+  // if (!TokenTypeUtil.isType(t.type)) { return null; }
+  const primType = ParseNode.createPrimitiveType(t.value as PrimitiveType, t);
 
   t = src.adv();
   if (t === null || t.type !== TokenType.DIM_L_BRACKET) { return primType; }
@@ -335,16 +346,17 @@ const parseType: ParseFunc = (src) => {
 // { stat1; stat2; }
 const parseStatementSequence: ParseFunc = (src) => {
   const lCurly = src.get();
-  if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
-    return null;
-  }
+  // if (lCurly.type !== TokenType.DIM_L_CURLY) {
+  //   return null;
+  // }
   // skip left curly
   src.adv();
-  const node = new ParseNode(ParseNodeType.STAT_SEQUENCE);
+  const node = new ParseNode(ParseNodeType.STAT_SEQUENCE, lCurly);
   while (true) {
     const rCurly = src.get();
-    if (rCurly === null) {
-      throw ParserError.expect('}', rCurly);
+    if (isEOF(src)) {
+      // terminate parsing when EOF found before right curly
+      src.err.throw(ParserError.expect('}', rCurly));
     }
     // get paring right curly, close block
     if (rCurly.type === TokenType.DIM_R_CURLY) {
@@ -363,23 +375,25 @@ const parseStatementSequence: ParseFunc = (src) => {
 // return expr;
 const parseStatementReturn: ParseFunc = (src) => {
   const ret = src.get();
-  if (ret === null || ret.type !== TokenType.KW_RETURN) {
-    return null;
-  }
+  // if (ret === null || ret.type !== TokenType.KW_RETURN) {
+  //   return null;
+  // }
   src.adv();
   const voidExpr = src.get();
-  if (voidExpr !== null && voidExpr.type === TokenType.DIM_SEMICOLON) {
+  if (voidExpr.type === TokenType.DIM_SEMICOLON) {
     src.adv();
-    const node = new ParseNode(ParseNodeType.STAT_RETURN_VOID);
+    const node = new ParseNode(ParseNodeType.STAT_RETURN_VOID, voidExpr);
     return node;
   }
   const expr = parseExpression(src);
   const semicolon = src.get();
-  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
-    throw ParserError.expect(';', semicolon);
+  if (semicolon.type !== TokenType.DIM_SEMICOLON) {
+    src.err.error(ParserError.expect(';', semicolon));
+  } else {
+    src.adv();
   }
-  src.adv();
-  const node = new ParseNode(ParseNodeType.STAT_RETURN);
+
+  const node = new ParseNode(ParseNodeType.STAT_RETURN, ret);
   node.addChild(expr);
   return node;
 };
@@ -387,25 +401,29 @@ const parseStatementReturn: ParseFunc = (src) => {
 // if(condition) {}, if(condition) {} else {}
 const parseStatementIf: ParseFunc = (src) => {
   const ifBegin = src.get();
-  if (ifBegin === null || ifBegin.type !== TokenType.KW_IF) {
-    return null;
-  }
+  // if (ifBegin === null || ifBegin.type !== TokenType.KW_IF) {
+  //   return null;
+  // }
   const lParen = src.adv();
-  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
-    throw ParserError.expect('(', lParen);
+  if (lParen.type !== TokenType.DIM_L_PAREN) {
+    src.err.error(ParserError.expect('(', lParen));
+  } else {
+    src.adv();
   }
-  src.adv();
+
   const condition = parseExpression(src);
   const rParen = src.get();
-  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
-    throw ParserError.expect(')', rParen);
+  if (rParen.type !== TokenType.DIM_R_PAREN) {
+    src.err.error(ParserError.expect(')', rParen));
+  } else {
+    src.adv();
   }
-  src.adv();
+
   const blockIfTrue = parseStatement(src);
   const elseBegin = src.get();
-  if (elseBegin === null || elseBegin.type !== TokenType.KW_ELSE) {
+  if (elseBegin.type !== TokenType.KW_ELSE) {
     // no else clause for this if statement
-    const node = new ParseNode(ParseNodeType.STAT_IF);
+    const node = new ParseNode(ParseNodeType.STAT_IF, ifBegin);
     node.addChild(condition);
     node.addChild(blockIfTrue);
     return node;
@@ -413,7 +431,7 @@ const parseStatementIf: ParseFunc = (src) => {
   // skip "else"
   src.adv();
   const blockIfFalse = parseStatement(src);
-  const node = new ParseNode(ParseNodeType.STAT_IF_ELSE);
+  const node = new ParseNode(ParseNodeType.STAT_IF_ELSE, elseBegin);
   node.addChild(condition);
   node.addChild(blockIfTrue);
   node.addChild(blockIfFalse);
@@ -423,45 +441,45 @@ const parseStatementIf: ParseFunc = (src) => {
 // break;
 const parseStatementBreak: ParseFunc = (src) => {
   const br = src.get();
-  if (br === null || br.type !== TokenType.KW_BREAK) {
-    return null;
-  }
+  // if (br.type !== TokenType.KW_BREAK) {
+  //   return null;
+  // }
   const semicolon = src.adv();
-  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
-    throw ParserError.expect(';', semicolon);
+  if (semicolon.type !== TokenType.DIM_SEMICOLON) {
+    src.err.error(ParserError.expect(';', semicolon));
+  } else {
+    src.adv();
   }
-  src.adv();
-  return new ParseNode(ParseNodeType.STAT_BREAK);
+  return new ParseNode(ParseNodeType.STAT_BREAK, br);
 };
 
 // continue;
 const parseStatementContinue: ParseFunc = (src) => {
   const cnt = src.get();
-  if (cnt === null || cnt.type !== TokenType.KW_CONTINUE) {
-    return null;
-  }
+  // if (cnt.type !== TokenType.KW_CONTINUE) {
+  //   return null;
+  // }
   const semicolon = src.adv();
-  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
-    throw ParserError.expect(';', semicolon);
+  if (semicolon.type !== TokenType.DIM_SEMICOLON) {
+    src.err.error(ParserError.expect(';', semicolon));
+  } else {
+    src.adv();
   }
-  src.adv();
-  return new ParseNode(ParseNodeType.STAT_CONTINUE);
+  return new ParseNode(ParseNodeType.STAT_CONTINUE, cnt);
 };
 
 // {case exp: stat; break; default: stat;}
 const parseSwitchBody: ParseFunc = (src) => {
   const lCurly = src.get();
-  if (lCurly === null || lCurly.type !== TokenType.DIM_L_CURLY) {
+  if (lCurly.type !== TokenType.DIM_L_CURLY) {
     throw ParserError.expect('{', lCurly);
   }
   // skip left curly
   src.adv();
-  const node = new ParseNode(ParseNodeType.SEG_SWITCH_BODY);
+  const node = new ParseNode(ParseNodeType.SEG_SWITCH_BODY, lCurly);
   while (true) {
     const next = src.get();
-    if (next === null) {
-      throw ParserError.expect('}', next);
-    }
+
     // get paring right curly, close block
     if (next.type === TokenType.DIM_R_CURLY) {
       src.adv();
@@ -476,12 +494,13 @@ const parseSwitchBody: ParseFunc = (src) => {
         throw ParserError.expect('expr', src.get());
       }
       const colon = src.get();
-      if (colon === null || colon.type !== TokenType.DIM_COLON) {
-        throw ParserError.expect(':', colon);
+      if (colon.type !== TokenType.DIM_COLON) {
+        src.err.error(ParserError.expect(':', colon));
+      } else {
+        // skip the colon
+        src.adv();
       }
-      // skip the colon
-      src.adv();
-      const caseNode = new ParseNode(ParseNodeType.SEG_CASE_LABEL);
+      const caseNode = new ParseNode(ParseNodeType.SEG_CASE_LABEL, next);
       caseNode.addChild(expr);
       node.addChild(caseNode);
       continue;
@@ -491,12 +510,14 @@ const parseSwitchBody: ParseFunc = (src) => {
     if (next.type === TokenType.KW_DEFAULT) {
       src.adv();
       const colon = src.get();
-      if (colon === null || colon.type !== TokenType.DIM_COLON) {
-        throw ParserError.expect(':', colon);
+      if (colon.type !== TokenType.DIM_COLON) {
+        src.err.error(ParserError.expect(':', colon));
+      } else {
+        // skip the colon
+        src.adv();
       }
-      // skip the colon
-      src.adv();
-      node.addChild(new ParseNode(ParseNodeType.SEG_DEFAULT_LABEL));
+
+      node.addChild(new ParseNode(ParseNodeType.SEG_DEFAULT_LABEL, next));
       continue;
     }
 
@@ -514,22 +535,26 @@ const parseSwitchBody: ParseFunc = (src) => {
 // switch(exp) switchBody
 const parseStatementSwitch: ParseFunc = (src) => {
   const switchBegin = src.get();
-  if (switchBegin === null || switchBegin.type !== TokenType.KW_SWITCH) {
-    return null;
-  }
+  // if (switchBegin.type !== TokenType.KW_SWITCH) {
+  //   return null;
+  // }
   const lParen = src.adv();
-  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
-    throw ParserError.expect('(', lParen);
+  if (lParen.type !== TokenType.DIM_L_PAREN) {
+    src.err.error(ParserError.expect('(', lParen));
+  } else {
+    src.adv();
   }
-  src.adv();
+
   const criteria = parseExpression(src);
   const rParen = src.get();
-  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
-    throw ParserError.expect(')', rParen);
+  if (rParen.type !== TokenType.DIM_R_PAREN) {
+    src.err.error(ParserError.expect(')', rParen));
+  } else {
+    src.adv();
   }
-  src.adv();
+
   const switchBody = parseSwitchBody(src);
-  const node = new ParseNode(ParseNodeType.STAT_SWITCH);
+  const node = new ParseNode(ParseNodeType.STAT_SWITCH, switchBegin);
   node.addChild(criteria);
   node.addChild(switchBody);
   return node;
@@ -538,38 +563,44 @@ const parseStatementSwitch: ParseFunc = (src) => {
 // do {} while (exp);
 const parseStatementDo: ParseFunc = (src) => {
   const doBegin = src.get();
-  if (doBegin === null || doBegin.type !== TokenType.KW_DO) {
-    return null;
-  }
+  // if (doBegin.type !== TokenType.KW_DO) {
+  //   return null;
+  // }
   src.adv();
   const loopBlock = parseStatement(src);
   if (loopBlock === null) {
-    throw ParserError.error('the loop block is required', src.get());
+    src.err.error(ParserError.error('the loop block is required', src.get()));
   }
   const whileBegin = src.get();
-  if (whileBegin === null || whileBegin.type !== TokenType.KW_WHILE) {
-    throw ParserError.expect('while', whileBegin);
+  if (whileBegin.type !== TokenType.KW_WHILE) {
+    src.err.error(ParserError.expect('while', whileBegin));
+  } else {
+    src.adv();
   }
 
-  const lParen = src.adv();
-  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
-    throw ParserError.expect('(', lParen);
+  const lParen = src.get();
+  if (lParen.type !== TokenType.DIM_L_PAREN) {
+    src.err.error(ParserError.expect('(', lParen));
+  } else {
+    src.adv();
   }
-  src.adv();
 
   const condition = parseExpression(src);
 
   const rParen = src.get();
-  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
-    throw ParserError.expect(')', rParen);
+  if (rParen.type !== TokenType.DIM_R_PAREN) {
+    src.err.error(ParserError.expect(')', rParen));
+  } else {
+    src.adv();
   }
-  const semicolon = src.adv();
+  const semicolon = src.get();
 
-  if (semicolon === null || semicolon.type !== TokenType.DIM_SEMICOLON) {
-    throw ParserError.expect(';', semicolon);
+  if (semicolon.type !== TokenType.DIM_SEMICOLON) {
+    src.err.error(ParserError.expect(';', semicolon));
+  } else {
+    src.adv();
   }
-  src.adv();
-  const node = new ParseNode(ParseNodeType.STAT_DO);
+  const node = new ParseNode(ParseNodeType.STAT_DO, doBegin);
   node.addChild(loopBlock);
   node.addChild(condition);
   return node;
@@ -578,22 +609,24 @@ const parseStatementDo: ParseFunc = (src) => {
 // while (expr) {}
 const parseStatementWhile: ParseFunc = (src) => {
   const whileBegin = src.get();
-  if (whileBegin === null || whileBegin.type !== TokenType.KW_WHILE) {
-    return null;
+  if (whileBegin.type !== TokenType.KW_WHILE) {
+    src.err.error(ParserError.expect('while', whileBegin));
   }
   const lParen = src.adv();
-  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
-    throw ParserError.expect('(', lParen);
+  if (lParen.type !== TokenType.DIM_L_PAREN) {
+    src.err.error(ParserError.expect('(', lParen));
+  } else {
+    src.adv();
   }
-  src.adv();
   const condition = parseExpression(src);
   const rParen = src.get();
-  if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
-    throw ParserError.expect(')', rParen);
+  if (rParen.type !== TokenType.DIM_R_PAREN) {
+    src.err.error(ParserError.expect(')', rParen));
+  } else {
+    src.adv();
   }
-  src.adv();
   const loopBlock = parseStatement(src);
-  const node = new ParseNode(ParseNodeType.STAT_WHILE);
+  const node = new ParseNode(ParseNodeType.STAT_WHILE, whileBegin);
   node.addChild(condition);
   node.addChild(loopBlock);
   return node;
@@ -601,7 +634,8 @@ const parseStatementWhile: ParseFunc = (src) => {
 
 // (int a, int b, int c)
 const parseFunctionParam: ParseFunc = (src) => {
-  const node = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_LIST);
+  // TODO: Merge token
+  const node = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_LIST, src.get());
 
   const emptyRParen = src.get();
   if (emptyRParen === null || emptyRParen.type === TokenType.DIM_R_PAREN) {
@@ -613,27 +647,27 @@ const parseFunctionParam: ParseFunc = (src) => {
     // get type
     const type = parseType(src);
     if (type === null) {
-      throw ParserError.expect('type', src.get());
+      src.err.error(ParserError.expect('type', src.get()));
     }
 
     const id = src.get();
-    if (id === null || id.type !== TokenType.ID_NAME) {
-      throw ParserError.expect('id', src.get());
+    if (id.type !== TokenType.ID_NAME) {
+      src.err.error(ParserError.expect('id', src.get()));
     }
     src.adv();
 
-    const item = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_ITEM);
+    const item = new ParseNode(ParseNodeType.SEG_FUNCTION_PARAM_ITEM, id);
     item.addChild(type);
-    item.addChild(ParseNode.createIdentifier(id.value));
+    item.addChild(ParseNode.createIdentifier(id.value, id));
     node.addChild(item);
 
     const comma = src.get();
-    if (comma === null || comma.type === TokenType.DIM_R_PAREN) {
+    if (comma.type === TokenType.DIM_R_PAREN) {
       return node;
     }
 
     if (comma.type !== TokenType.DIM_COMMA) {
-      throw ParserError.expect(',', comma);
+      src.err.error(ParserError.expect(',', comma));
     }
     src.adv();
   }
@@ -647,7 +681,7 @@ const parseFunction: ParseFunc = (src, type, id) => {
     throw ParserError.error('function type and identifer are required', src.get());
   }
   const lParen = src.get();
-  if (lParen === null || lParen.type !== TokenType.DIM_L_PAREN) {
+  if (lParen.type !== TokenType.DIM_L_PAREN) {
     throw ParserError.expect('(', lParen);
   }
   src.adv();
@@ -666,7 +700,7 @@ const parseFunction: ParseFunc = (src, type, id) => {
     throw ParserError.expect('body', src.get());
   }
 
-  const node = new ParseNode(ParseNodeType.STAT_FUNCTION);
+  const node = new ParseNode(ParseNodeType.STAT_FUNCTION, id.token);
   node.addChild(id);
   node.addChild(type);
   node.addChild(param);
@@ -678,14 +712,13 @@ const parseFunction: ParseFunc = (src, type, id) => {
 // a, a := 10
 const parseDeclareItem: ParseFunc = (src, id) => {
   const t = src.get();
-  if (t === null) { return null; }
   if (t.type === TokenType.DIM_COMMA || t.type === TokenType.DIM_SEMICOLON) {
-    return ParseNode.createDeclarationItem(id);
+    return ParseNode.createDeclarationItem(id, undefined, id.token);
   }
   if (t.type === TokenType.OP_ASS_VAL) {
     src.adv();
     const expr = parseExpression(src);
-    return expr && ParseNode.createDeclarationItem(id, expr);
+    return expr && ParseNode.createDeclarationItem(id, expr, id.token);
   }
   throw ParserError.expect(':= , ;', t);
 };
@@ -694,19 +727,24 @@ const parseDeclareItem: ParseFunc = (src, id) => {
 const parseDeclareList: ParseFunc = (src, firstId) => {
   const declareList: ParseNode[] = [];
   let t = src.get();
-  let id = firstId ? firstId : null;
+  let id: ParseNode | null = firstId;
   while (true) {
     if (!id) {
-      if (t === null || t.type !== TokenType.ID_NAME) { throw ParserError.expect('identifier', t); }
-      id = ParseNode.createIdentifier(t.value);
+      if (t.type !== TokenType.ID_NAME) {
+        src.err.error(ParserError.expect('identifier', t));
+      } else {
+        id = ParseNode.createIdentifier(t.value, t);
+      }
       t = src.adv();
     }
-    const item = parseDeclareItem(src, id);
-    if (item === null) {
-      throw ParserError.error('cannot parse declaration item', src.get());
+    if (id) {
+      const item = parseDeclareItem(src, id);
+      // if (item === null) {
+      //   throw ParserError.error('cannot parse declaration item', src.get());
+      // }
+      id = null;
+      declareList.push(item);
     }
-    id = null;
-    declareList.push(item);
     t = src.get();
     if (t === null || (t.type !== TokenType.DIM_COMMA && t.type !== TokenType.DIM_SEMICOLON)) {
       throw ParserError.expect(', ;', t);
@@ -716,7 +754,7 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
     src.adv();
 
     if (t.type === TokenType.DIM_SEMICOLON) {
-      return ParseNode.createDeclarationList(declareList);
+      return ParseNode.createDeclarationList(declareList, t);
     }
 
     t = src.get();
@@ -726,20 +764,19 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
 // int declarationList; int[arr] a;
 const parseStatementDeclaration: ParseFunc = (src) => {
   let t = src.get();
-  if (!t || !TokenTypeUtil.isType(t.type)) { return null; }
+  // if (!t || !TokenTypeUtil.isType(t.type)) { return null; }
   const type = parseType(src);
-  if (type === null) { return null; }
 
   // identifier
   t = src.get();
-  if (t === null || t.type !== TokenType.ID_NAME) {
+  if (t.type !== TokenType.ID_NAME) {
     throw ParserError.expect('identifier', t);
   }
   src.adv(); // move after identifier
-  const id = ParseNode.createIdentifier(t.value);
+  const id = ParseNode.createIdentifier(t.value, t);
 
   t = src.get();
-  if (t === null || ![
+  if (![
     TokenType.OP_ASS_VAL,    // := --> int a := 10;
     TokenType.DIM_COMMA,     // ,  --> int a, b;
     TokenType.DIM_L_PAREN,   // (  --> int a (int b){}
@@ -755,7 +792,7 @@ const parseStatementDeclaration: ParseFunc = (src) => {
     // in this case, only one identifier is allowed after it
     if (t.type === TokenType.DIM_SEMICOLON) {
       src.adv();
-      return ParseNode.createDeclarationArray(type, id);
+      return ParseNode.createDeclarationArray(type, id, type.token);
     } else if (t.type === TokenType.DIM_COMMA) {
       throw ParserError.error('array declaration can only specify on variable', t);
     } else if (t.type === TokenType.OP_ASS_VAL) {
@@ -764,36 +801,33 @@ const parseStatementDeclaration: ParseFunc = (src) => {
   } else if (type.type === ParseNodeType.TYPE_ARRAY_REF) {
     if ([TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {
       const list = parseDeclareList(src, id);
-      if (list !== null) {
-        return ParseNode.createDeclarationArrayRef(type, list);
-      }
+      return ParseNode.createDeclarationArrayRef(type, list, type.token);
     }
   } else if (type.type === ParseNodeType.TYPE_PRIMITIVE) {
     if ([TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {
       const list = parseDeclareList(src, id);
-      if (list !== null) {
-        return ParseNode.createDeclarationPrimitive(type, list);
-      }
+      return ParseNode.createDeclarationPrimitive(type, list, type.token);
     }
   }
-  return null;
+  throw ParserError.error('', t);
 };
 
 // expression or declaration
 const parseStatementExprDecl: ParseFunc = (src) => {
   const t = src.get();
-  if (!t) { return null; }
+  // if (!t) { return null; }
 
   if (TokenTypeUtil.isType(t.type)) {
     return parseStatementDeclaration(src);
   }
   const expr = parseExpression(src);
   const end = src.get();
-  if (end === null || end.type !== TokenType.DIM_SEMICOLON) {
-    throw ParserError.expect(';', end);
+  if (end.type !== TokenType.DIM_SEMICOLON) {
+    src.err.error(ParserError.expect(';', end));
+  } else {
+    src.adv();
   }
-  src.adv();
-  const exprStat = new ParseNode(ParseNodeType.STAT_EXPR);
+  const exprStat = new ParseNode(ParseNodeType.STAT_EXPR, t);
   exprStat.addChild(expr);
   return exprStat;
 };
@@ -801,7 +835,9 @@ const parseStatementExprDecl: ParseFunc = (src) => {
 // statement
 const parseStatement: ParseFunc = (src) => {
   const t = src.get();
-  if (!t) { return null; }
+  if (isEOF(src)) {
+    src.err.throw(ParserError.expect('statement', t));
+  }
   let node = null;
   switch (t.type) {
     case TokenType.DIM_L_CURLY:
@@ -836,13 +872,18 @@ const parseStatement: ParseFunc = (src) => {
 
 // source file abstraction
 const parseSource: ParseFunc = (src) => {
-  const node = new ParseNode(ParseNodeType.SRC_SOURCE);
-  while (src.get()) {
+  const node = new ParseNode(ParseNodeType.SRC_SOURCE, src.get());
+  while (!isEOF(src)) {
     const child = parseStatement(src);
     if (child) {
       node.children.push(child);
     } else {
-      throw ParserError.error('cannot parse token', src.get());
+      src.err.error(ParserError.error('cannot parse token', src.get()));
+      // skip unrecognized token to prevent infinite loop
+      if (isEOF(src)) {
+        break;
+      }
+      src.adv();
     }
   }
   return node;
@@ -853,7 +894,7 @@ export const parser = (tokensWithWhiteSpace: Token[]): IParserResult => {
   const tokens = tokensWithWhiteSpace.filter((tk) => !TokenTypeUtil.isWhiteSpace(tk.type));
   const errList: ErrorList = new ErrorList();
   const tokenSource: ITokenSource = {
-    get: () => tokens[tokenIndex] || null,
+    get: () => tokens[tokenIndex],
     peek: (i: number = 1) => tokens[tokenIndex + i],
     adv: (i: number = 1) => tokens[tokenIndex += i],
     err: errList,

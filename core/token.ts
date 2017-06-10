@@ -56,6 +56,8 @@ export enum TokenType {
 
   INV_VALUE, // invalid value for some val type
   INV_NO_MATCH, // invalid token
+
+  EOF, // indicating end of file
 }
 
 export const TokenTypeUtil = {
