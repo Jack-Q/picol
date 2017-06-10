@@ -19,6 +19,13 @@ interface IExecutionVal {
 
 const HEAP_BASE = 10000;
 
+const arraySet = <T>(arr: T[], ind: number, ele: T): void => {
+  if (arr.length <= ind) {
+    arr.length = ind + 1;
+  }
+  arr.splice(ind, 1, ele);
+};
+
 export class Executor {
   public pc: number;
   public frameBase: number;
@@ -92,7 +99,7 @@ export class Executor {
           const result = this.calcByOperator(quad.operator, val1.value, val2.value);
           const target = quad.result as QuadrupleArgVarTemp;
           console.log(target, result);
-          this.temp.splice(target.tempIndex, 1, result.value);
+          arraySet(this.temp, target.tempIndex, result.value);
         }
         break;
 
@@ -119,7 +126,7 @@ export class Executor {
         {
           const data = this.getValue(quad.argument1);
           const target = quad.result as QuadrupleArgVarTemp;
-          this.temp.splice(target.tempIndex, 1, data.value);
+          arraySet(this.temp, target.tempIndex, data.value);
         }
         break;
 
@@ -178,7 +185,7 @@ export class Executor {
         {
           const val1 = this.getValue(quad.argument1);
           const target = quad.result as QuadrupleArgVarTemp;
-          this.temp.splice(target.tempIndex, 1, val1.value);
+          arraySet(this.temp, target.tempIndex, val1.value);
         }
         break;
       // heap memory management
@@ -187,7 +194,7 @@ export class Executor {
           const size = this.getValue(quad.argument1).value;
           const target = quad.result as QuadrupleArgVarTemp;
           const address = this.allocateHeap(size);
-          this.temp.splice(target.tempIndex, 1, address);
+          arraySet(this.temp, target.tempIndex, address);
         }
         break;
       case QuadrupleOperator.M_FREE: // free heap memory
@@ -219,15 +226,15 @@ export class Executor {
   private stackFill(addr: number, val: IExecutionVal) {
     if (addr >= HEAP_BASE) {
       // assign to heap
-      this.heap.splice(addr - HEAP_BASE, 1, val.value);
+      arraySet(this.heap, addr - HEAP_BASE, val.value);
       for (let i = 1; i < val.span; i++) {
-        this.heap.splice(addr + i - HEAP_BASE, 1, -1);
+        arraySet(this.heap, addr + i - HEAP_BASE, -1);
       }
     } else {
       // assign to stack
-      this.stack.splice(this.frameBase + addr, 1, val.value);
+      arraySet(this.stack, this.frameBase + addr, val.value);
       for (let i = 1; i < val.span; i++) {
-        this.stack.splice(this.frameBase + addr + i, 1, -1);
+        arraySet(this.stack, this.frameBase + addr + i, -1);
       }
     }
   }
