@@ -216,9 +216,35 @@ export default class Index extends Vue {
         const context = core.generator(this.ast);
         this.contextTree = context.contextTree;
         this.quadrupleTable = context.quadrupleList;
+
+        const errorList: PicolError[] = context.errorList;
+        this.errorList.push(...errorList);
+        // add errors
+        monaco.editor.setModelMarkers(model, "Generator", errorList.map((e) => {
+          const t = e.token || tokenList[tokenList.length - 1];
+          return {
+            startLineNumber: t.position.line, 
+            startColumn: t.position.col, 
+            endLineNumber: t.position.line, 
+            endColumn: t.position.col + t.literal.length, 
+            message: e.message, 
+            severity: monaco.Severity.Error,
+            source: "Generator"
+          };
+        }));
       }
     }catch(e){
-
+      this.errorList.push(e as PicolError);
+      const t: Token = e.token || tokenList[tokenList.length - 1];
+      monaco.editor.setModelMarkers(model, "Generator", [{
+        startLineNumber: t.position.line, 
+        startColumn: t.position.col, 
+        endLineNumber: t.position.line, 
+        endColumn: t.position.col + t.literal.length, 
+        message: e.message, 
+        severity: monaco.Severity.Error,
+        source: "Generator"
+      }]);
     }
   }
 }

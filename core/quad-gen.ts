@@ -1,5 +1,5 @@
 import { ExecutionContext, GeneratorContext } from './context';
-import { GeneratorError, ParserError } from './error';
+import { ErrorList, GeneratorError, ParserError, PicolError } from './error';
 import { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
 import {
   Quadruple, QuadrupleArg, QuadrupleArgArrayAddr, QuadrupleArgNull, QuadrupleArgQuadRef,
@@ -103,7 +103,7 @@ class AttrExpr implements IAttr {
 
   public toRef(ctx: GeneratorContext): QuadrupleArg {
     if (this.isBoolean) {
-      throw new GeneratorError('boolean cannot be used as reference value');
+      throw new GeneratorError('boolean cannot be used as reference value', undefined);
     }
     switch (this.value.type) {
       case QuadrupleArgType.TABLE_REF: // direct table reference
@@ -113,7 +113,7 @@ class AttrExpr implements IAttr {
       case QuadrupleArgType.NULL: // null value cannot be written
       case QuadrupleArgType.VALUE_INST: // instance value cannot be written
       default:
-        throw new GeneratorError('value cannot be used as reference');
+        throw new GeneratorError('value cannot be used as reference', undefined);
     }
   }
 }
@@ -182,7 +182,7 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
       assign(ctx, temp2, operand);
       break;
     default:
-      throw new GeneratorError('unknown unary operator');
+      ctx.err.error(new GeneratorError('unknown unary operator', node.token));
   }
   return new AttrExpr(temp);
 };
@@ -321,7 +321,8 @@ const generateExpressionArrAccess: generateRule<AttrExpr> = (ctx, node) => {
     }
   });
   if (!addrOffset) {
-    throw new GeneratorError('empty array index list');
+    ctx.err.error(new GeneratorError('empty array index list', node.token));
+    addrOffset = Q_NULL;
   }
 
   const totalOffset = ctx.getTempVar();
@@ -381,10 +382,12 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
 
     const nameStatus = ctx.checkName(name);
     if (nameStatus.isDefined && nameStatus.currentContext) {
-      throw new GeneratorError('variable is defined ' + name);
+      ctx.err.error(new GeneratorError('variable is defined ' + name, i.children[0].token));
+    } else {
+      // for redefinition, use the first definition
+      ctx.addEntry.prim(name, type);
     }
 
-    ctx.addEntry.prim(name, type);
     const ref = ctx.getEntry(name);
 
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
@@ -413,7 +416,9 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
 
   const nameStatus = ctx.checkName(arrayName);
   if (nameStatus.isDefined && nameStatus.currentContext) {
-    throw new GeneratorError('name redefinition:' + name);
+    ctx.err.error(new GeneratorError('name redefinition:' + name, node.children[1].token));
+    // stop processing this item
+    return attr.valid();
   }
 
   ctx.addEntry.arr(arrayName, primitiveType, arrDimensionDef.children.length); // dimension, type, name
@@ -435,8 +440,10 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
     }
   });
   if (!size) {
-    throw new GeneratorError('empty array dimension');
+    ctx.err.error(new GeneratorError('empty array dimension', arrDimensionDef.token));
+    size = Q_NULL;
   }
+
   const totalSize = ctx.getTempVar();
   const elementSize = arrEntryInfo.elementSize;
   ctx.addQuadruple(QuadrupleOperator.I_MUL, size, new QuadrupleArgValue(PrimitiveType.INT, elementSize),
@@ -458,10 +465,11 @@ const generateDeclarationArrayRef: generateRule<IAttr> = (ctx, node) => {
 
     const nameStatus = ctx.checkName(name);
     if (nameStatus.isDefined && nameStatus.currentContext) {
-      throw new GeneratorError('variable redefinition');
+      ctx.err.error(new GeneratorError('variable redefinition', i.children[0].token));
+    } else {
+      ctx.addEntry.arrRef(name, type, dim);
     }
 
-    ctx.addEntry.arrRef(name, type, dim);
     const ref = ctx.getEntry(name);
     if (i.children[1].type === ParseNodeType.VAL_UNINITIALIZED) {
       // const defaultValue = getDefaultValue(type);
@@ -484,9 +492,10 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
 
   const nameStatus = ctx.checkName(name);
   if (nameStatus.isDefined && nameStatus.currentContext) {
-    throw new GeneratorError('name redefinition: ' + name);
+    ctx.err.error(new GeneratorError('name redefinition: ' + name, node.children[0].token));
+  } else {
+    ctx.addEntry.func(name); // function name is exposed outside of function block
   }
-  ctx.addEntry.func(name); // function name is exposed outside of function block
 
   // wrap in function block context
   ctx.wrapInContext('Function: ' + name, {
@@ -517,7 +526,7 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
 
       if (functionInfo.parameterList.some((p) => p.name === parameter.name)) {
         // name conflict
-        throw new GeneratorError('parameter with same name already defined');
+        ctx.err.error(new GeneratorError('parameter with same name already defined', item.children[1].token));
       } else {
         // add argument to function block
         if (parameter.type.type === ValueType.ARRAY_REF) {
@@ -793,18 +802,24 @@ const generateSource: generateRule<IAttr> = (ctx, node) => {
 export interface IntermediateContext {
   quadrupleList: Quadruple[];
   contextTree: ExecutionContext;
+  errorList: PicolError[];
 }
 
 // generate quadruple based on ast
 export const generator = (ast: ParseNode): IntermediateContext => {
   if (ast.type !== ParseNodeType.SRC_SOURCE) {
-    throw new GeneratorError('root of AST for generator must be a source file');
+    throw new GeneratorError('root of AST for generator must be a source file', ast.token);
   }
   const ctx = new GeneratorContext();
   try {
     const result = generateSource(ctx, ast);
   } catch (e) {
     console.log(e);
+    ctx.err.fatal(e);
   }
-  return { quadrupleList: ctx.quadrupleTable, contextTree: ctx.currentContext };
+  return {
+    quadrupleList: ctx.quadrupleTable,
+    contextTree: ctx.currentContext,
+    errorList: ctx.err.errorList,
+  };
 };

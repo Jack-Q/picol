@@ -1,5 +1,5 @@
 import { buildInFunctions } from './build-in';
-import { GeneratorError } from './error';
+import { ErrorList, GeneratorError } from './error';
 import {
   Quadruple, QuadrupleArg, QuadrupleArgQuadRef, QuadrupleArgTableRef,
   QuadrupleArgVarTemp, QuadrupleOperator,
@@ -63,7 +63,7 @@ export class ExecutionContext {
     if (recursive && this.parent) {
       return this.parent.getEntry(name, recursive);
     }
-    throw new GeneratorError('no symbol defined with name ' + name);
+    throw new GeneratorError('no symbol defined with name ' + name, undefined);
   }
 
   public checkName(name: string, current: boolean = true): INameStatus {
@@ -100,6 +100,9 @@ export class ExecutionContext {
  * Generator Context
  */
 export class GeneratorContext {
+
+  public err: ErrorList = new ErrorList();
+
   /**
    * Temporary variable counter
    * Picol use single shared global counter for temporary variable across one compiling unit
@@ -158,7 +161,7 @@ export class GeneratorContext {
     content();
     const popCtx = this.popContext();
     if (ctx !== popCtx) {
-      throw new GeneratorError('inconsistent context state');
+      throw new GeneratorError('inconsistent context state', undefined);
     }
   }
 
@@ -253,7 +256,7 @@ export class GeneratorContext {
   public popBreakChain(): number {
     const chain = this.breakChain.pop();
     if (chain === undefined) {
-      throw new GeneratorError('pop empty break chain context');
+      throw new GeneratorError('pop empty break chain context', undefined);
     }
     return chain;
   }
@@ -261,7 +264,7 @@ export class GeneratorContext {
   public mergeIntoBreakChain(chain: number) {
     const len = this.breakChain.length;
     if (len === 0) {
-      throw new GeneratorError('no break chain, break statement outside of breakable block');
+      throw new GeneratorError('no break chain, break statement outside of breakable block', undefined);
     }
     this.breakChain[len - 1] = this.mergeChain(this.breakChain[len - 1], chain);
   }
@@ -273,14 +276,14 @@ export class GeneratorContext {
   public popContinueChain(): number {
     const chain = this.continueChain.pop();
     if (chain === undefined) {
-      throw new GeneratorError('pop empty break chain context');
+      throw new GeneratorError('pop empty break chain context', undefined);
     }
     return chain;
   }
   public mergeIntoContinueChain(chain: number) {
     const len = this.continueChain.length;
     if (len === 0) {
-      throw new GeneratorError('no continue chain, continue statement outside of loop block');
+      throw new GeneratorError('no continue chain, continue statement outside of loop block', undefined);
     }
     this.continueChain[len - 1] = this.mergeChain(this.continueChain[len - 1], chain);
   }

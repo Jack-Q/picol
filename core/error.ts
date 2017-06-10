@@ -50,10 +50,10 @@ export class ParserError extends PicolError {
 }
 
 export class GeneratorError extends PicolError {
-  constructor(message: string, token?: Token) {
+  constructor(message: string, token: Token | undefined) {
     super(message);
-    this.token = token;
-    if (this.token) {
+    if (token) {
+      this.token = token;
       this.pos = this.token.position;
     }
     this.name =  errorName.generator;
