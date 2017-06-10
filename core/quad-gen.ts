@@ -274,11 +274,23 @@ const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
   const returnVal = new QuadrupleArgArrayAddr(Q_NULL, new QuadrupleArgValue(PrimitiveType.INT, funcFrame));
   funcFrame += funcInfo.returnType.size; // Skip return value
 
+  if (argList.length !== funcInfo.parameterList.length) {
+    ctx.err.error(new GeneratorError('the number of arguments mismatches to the number of parameter',
+      node.children[0].token));
+  }
+
   argList.forEach((arg, ind) => {
     const val = generateExpression(ctx, arg).toValue(ctx);
     const target = new QuadrupleArgArrayAddr(Q_NULL, new QuadrupleArgValue(PrimitiveType.INT, funcFrame));
-    funcFrame += funcInfo.parameterList[ind].type.size;
-    ctx.addQuadruple(QuadrupleOperator.F_PARA, val, Q_NULL, target);
+
+    const paraInfo = funcInfo.parameterList[ind];
+    if (paraInfo) {
+      funcFrame += paraInfo.type.size;
+      ctx.addQuadruple(QuadrupleOperator.F_PARA, val, Q_NULL, target);
+    } else {
+      ctx.err.error(new GeneratorError('this argument exceeds the parameter count',
+        arg.token));
+    }
   });
 
   const funcFrameBaseArg = new QuadrupleArgValue(PrimitiveType.INT, funcFrameBase);
