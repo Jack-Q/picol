@@ -1,7 +1,7 @@
 <template>
   <div class="root">
-    <div v-if="quadruples.length" class="list">
-      <div v-for="q in quadruples" class="quadruple-item" :class="{highlight: q.i + 1 === highlight}">
+    <div v-if="quadruples.length" class="list" ref='quad-list'>
+      <div v-for="q in quadruples" :key="q.i + 1" :ref="'quad-item-' + (q.i + 1)" class="quadruple-item" :class="{highlight: q.i + 1 === highlight}">
         <div class="quad-index">{{q.i + 1}}</div>
         <div class="quad-op">{{q.op}}</div>
         <div class="quad-arg">{{q.a1}}</div>
@@ -17,7 +17,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
+import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
 import { Quadruple } from '../../../../core/main';
 
 @Component({
@@ -29,6 +29,32 @@ export default class QuadViewer extends Vue {
 
   @Lifecycle mounted() { 
 
+  }
+
+  @Watch('highlight')
+  handler(newVal: number, oldVal: number) {
+    // scroll the quadruple list
+    const list = this.$refs['quad-list'] as Element;
+    const hlgh = this.$refs['quad-item-' + newVal] as Element[];
+    const offsetTop = (hlgh[0] as any).offsetTop;
+    const scrollTop = offsetTop > list.clientHeight / 2 ? offsetTop - list.clientHeight / 2 : 0;
+    const oldScrollTop = list.scrollTop;
+
+    if(screenTop == oldScrollTop) {
+      return;
+    }
+
+    // animate scroll to effect
+    let delta = oldScrollTop - scrollTop;
+    const ani = () => {
+      delta *= 0.9;
+      if(delta < 3){
+        list.scrollTop = scrollTop;
+      }
+      list.scrollTop = scrollTop + delta;
+      requestAnimationFrame(ani);
+    };
+    requestAnimationFrame(ani);
   }
 
   public get quadruples() {
@@ -57,6 +83,7 @@ export default class QuadViewer extends Vue {
   overflow-x: hidden;
   overflow-y: auto;
   height: 100%;
+  position: relative;
 }
 .quadruple-item {
   position: relative;
@@ -67,7 +94,8 @@ export default class QuadViewer extends Vue {
   transition: all ease 400ms;
 }
 .quadruple-item.highlight {
-  background: #bfffca;
+  background: #8fffba;
+  text-shadow: 0 0 2px #000;
 }
 .quadruple-item:hover {
   background: #fafaff;
