@@ -94,6 +94,16 @@ const loadLanguage = (): void => {
   }
 };
 
+const createMarker = (source: string, message: string, t: Token): monaco.editor.IMarkerData => ({
+  startLineNumber: t.position.line, 
+  startColumn: t.position.col, 
+  endLineNumber: t.position.line, 
+  endColumn: t.position.col + t.literal.length, 
+  message, 
+  severity: monaco.Severity.Error,
+  source: "Lexer"
+});
+
 @Component({
   name: 'index',
   components: {
@@ -138,44 +148,25 @@ export default class Index extends Vue {
     this.code = model.getValue();
     fileModel.currentFile.src = this.code;
     const tokenList = Array.from(core.lexer(this.code));
-    const markers: monaco.editor.IMarkerData[] = [];
+    const lexerMarkers: monaco.editor.IMarkerData[] = [];
     this.errorList = [];
 
     // Lexer
     tokenList.map((t)=>{
       if(t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE){
         this.errorList.push(PicolError.lexerError('unknown token', t));
-        markers.push({
-          startLineNumber: t.position.line, 
-          startColumn: t.position.col, 
-          endLineNumber: t.position.line, 
-          endColumn: t.position.col + t.literal.length, 
-          message: t.value, 
-          severity: monaco.Severity.Error,
-          source: "Lexer"
-        });
+        lexerMarkers.push(createMarker("Lexer", t.value, t));
         return;
       }
       if (t.type === TokenType.SP_WHITE) {
         return;
       }
-      // markers.push({
-      //   startLineNumber: t.position.line, 
-      //   startColumn: t.position.col, 
-      //   endLineNumber: t.position.line, 
-      //   endColumn: t.position.col + t.literal.length, 
-      //   message: TokenType[t.type] + ': ' + JSON.stringify(t.literal) + ' ' + (t.value || ''), 
-      //   severity: monaco.Severity.Info,
-      //   source: "Lexer"
-      // });
     })
-    monaco.editor.setModelMarkers(model, "Lexer", markers);
+    monaco.editor.setModelMarkers(model, "Lexer", lexerMarkers);
     
     // Parser
+    const parserMarkers:  monaco.editor.IMarkerData[] = [];
     try{
-      // clean original errors
-      monaco.editor.setModelMarkers(model, "Parser", []);
-
       const parserResult = core.parser(tokenList);
       const ast = parserResult.ast;
       this.ast = ast;
@@ -183,34 +174,20 @@ export default class Index extends Vue {
         // add errors to side list
         this.errorList.push(...parserResult.errorList);
         // add errors
-        monaco.editor.setModelMarkers(model, "Parser", parserResult.errorList.map((e) => {
+        parserResult.errorList.map((e) => {
           const t = e.token || tokenList[tokenList.length - 1];
-          return {
-            startLineNumber: t.position.line, 
-            startColumn: t.position.col, 
-            endLineNumber: t.position.line, 
-            endColumn: t.position.col + t.literal.length, 
-            message: e.message, 
-            severity: monaco.Severity.Error,
-            source: "Parser"
-          };
-        }));
+          parserMarkers.push(createMarker("Parser", e.message, t));
+        });
       }
     } catch(e){
       this.errorList.push(e as PicolError);
       const t: Token = e.token || tokenList[tokenList.length - 1];
-      monaco.editor.setModelMarkers(model, "Parser", [{
-        startLineNumber: t.position.line, 
-        startColumn: t.position.col, 
-        endLineNumber: t.position.line, 
-        endColumn: t.position.col + t.literal.length, 
-        message: e.message, 
-        severity: monaco.Severity.Error,
-        source: "Parser"
-      }]);
+      parserMarkers.push(createMarker("Parser", e.message, t));
     }
+    monaco.editor.setModelMarkers(model, "Parser", parserMarkers);
 
     // Generator
+    const generatorMarkers:  monaco.editor.IMarkerData[] = [];
     try{
       if(this.ast){
         const context = core.generator(this.ast);
@@ -220,32 +197,18 @@ export default class Index extends Vue {
         const errorList: PicolError[] = context.errorList;
         this.errorList.push(...errorList);
         // add errors
-        monaco.editor.setModelMarkers(model, "Generator", errorList.map((e) => {
+        errorList.map((e) => {
           const t = e.token || tokenList[tokenList.length - 1];
-          return {
-            startLineNumber: t.position.line, 
-            startColumn: t.position.col, 
-            endLineNumber: t.position.line, 
-            endColumn: t.position.col + t.literal.length, 
-            message: e.message, 
-            severity: monaco.Severity.Error,
-            source: "Generator"
-          };
-        }));
+          generatorMarkers.push(createMarker("Generator", e.message, t));
+        });
       }
     }catch(e){
       this.errorList.push(e as PicolError);
       const t: Token = e.token || tokenList[tokenList.length - 1];
-      monaco.editor.setModelMarkers(model, "Generator", [{
-        startLineNumber: t.position.line, 
-        startColumn: t.position.col, 
-        endLineNumber: t.position.line, 
-        endColumn: t.position.col + t.literal.length, 
-        message: e.message, 
-        severity: monaco.Severity.Error,
-        source: "Generator"
-      }]);
+      generatorMarkers.push(createMarker("Generator", e.message, t));
     }
+    monaco.editor.setModelMarkers(model, "Generator", generatorMarkers);
+
   }
 }
 
