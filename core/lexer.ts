@@ -137,6 +137,9 @@ const matchers:
       const initPos = { ...getPos() }, open = ch;
       while (true) {
         ch = peek(pos++);
+        if (ch === undefined) {
+           break;
+        }
         lit += ch;
         if (ch === '\\') {
           // escape char, other escape sequence are keep its original form
