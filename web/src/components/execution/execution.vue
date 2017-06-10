@@ -1,23 +1,56 @@
 <template>
   <div class="executor-root" v-if="program">
     <div class="col statue-col">
-      PC: {{executor.pc}}
-      FrameBase: {{executor.frameBase}}
-      <div>
+      <div class="section">status</div>
+      <dl>
+        <dt>PC</dt>
+        <dd>{{executor.pc}}</dd>
+        <dt>Frame Base</dt>
+        <dd>{{executor.frameBase}}</dd>
+      </dl>
+      <div class="section">control</div>
+      <div class="control">
         <ui-button @click="step">Step</ui-button>
         <ui-button @click="reset">Reset</ui-button>
         <ui-button @click="executor.console = []">Clear Console</ui-button>
         <div class="auto-execution-block">
           <ui-switch switchPosition="right" :value="autoExecute" @input="toggleAutoExecute($event)">Auto Execute</ui-switch>
-          <ui-slider ref="slider" icon="play" v-model="speed" :step='10' showMarker snapToSteps :markerValue='calcSpeed'>Speed</ui-slider>
+          Speed: <ui-slider ref="slider" icon="play" v-model="speed" :step='10' showMarker snapToSteps :markerValue='calcSpeed'>Speed</ui-slider>
         </div>
       </div>
-      console
+      <div class="section">console</div>
       <div class="console">
-        <div v-for="err in executor.console">
-          {{err.severity}}
-          {{err.message}}
-        </div>
+        <template v-for="err in executor.console.map(i => i).reverse()">
+          <div v-if="getSeverity(err.severity) === 'INFO'" class="info info-message">
+            <div class="icon">
+              <ui-icon>info</ui-icon>
+            </div>
+            {{err.message}}
+          </div>
+          <div v-else-if="getSeverity(err.severity) === 'WARN'" class="info info-warning">
+            <div class="icon">
+              <ui-icon>warning</ui-icon>
+            </div>
+            <div class="message">{{err.message}}</div>
+          </div>
+          <div v-else-if="getSeverity(err.severity) === 'ERROR'" class="info info-error">
+            <div class="icon">
+              <ui-icon>error</ui-icon>
+            </div>
+            <div class="message">{{err.message}}</div>
+          </div>
+          <div v-else-if="getSeverity(err.severity) === 'FATAL'" class="info info-fatal">
+            <div class="icon">
+              <ui-icon>block</ui-icon>
+            </div>
+            <div class="message">{{err.message}}</div>
+          </div>
+          <div v-else>
+            {{getSeverity(err.severity)}}
+            {{err.severity}}
+            <div class="message">{{err.message}}</div>
+          </div>
+        </template>
       </div>
     </div>
     <div class="col">
@@ -44,7 +77,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
-import { Quadruple, Executor } from '../../../../core/main';
+import { Quadruple, Executor, ErrorSeverity } from '../../../../core/main';
 
 import QuadViewer from '../intermediate/quad-viewer';
 import MemoryView from './memory-view';
@@ -104,6 +137,10 @@ export default class Execution extends Vue {
   reset() {
     this.executor.reset();
   }
+
+  getSeverity(severity: ErrorSeverity): string{
+    return ErrorSeverity[severity];
+  }
 }
 </script>
 
@@ -133,14 +170,59 @@ export default class Execution extends Vue {
     width: 100%;
     position: relative;
   }
+  .control {
+    text-align: center;
+    padding: 5px 20px;
+  }
   .console{
     overflow-y: auto;
-  }
-
-  .section-header {
-     
+    font-size: 0.9em;
+    line-height: 25px;
   }
   .program{
     min-width: 280px;
+    flex: 1;
+  }
+
+  .section {
+    text-align: center;
+    background: #eee;
+    height: 45px;
+    line-height: 45px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+
+  dl{
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  dt{
+    margin: 0 0 4px 0;
+    float: left;
+    clear: left;
+    width: 35%;
+  }
+
+  dd{
+    float: left;
+    width: 64%;
+    margin: 0 0 4px 1%;
+  }
+  .info {
+    display: flex;
+    width: 100%;
+  }
+  .icon{
+    text-align: center;
+    min-width: 60px;
+    flex: 0;
+  }
+  .message{
+    text-align: left;
+    flex: 1;
+    border-left: solid #ccc 1px;
   }
 </style>

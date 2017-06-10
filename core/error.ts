@@ -31,13 +31,20 @@ export class ParserError extends PicolError {
   private constructor(message: string, token?: Token) {
     super(message);
     this.token = token;
+    if (this.token) {
+      this.pos = this.token.position;
+    }
     this.name = 'ParserError';
   }
 }
 
 export class GeneratorError extends PicolError {
-  constructor(message: string) {
+  constructor(message: string, token?: Token) {
     super(message);
+    this.token = token;
+    if (this.token) {
+      this.pos = this.token.position;
+    }
     this.name = 'GeneratorError';
   }
 }

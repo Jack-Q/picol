@@ -1,12 +1,20 @@
 <template>
   <div class="root">
     <div v-if="quadruples.length" class="list" ref='quad-list'>
-      <div v-for="q in quadruples" :key="q.i + 1" :ref="'quad-item-' + (q.i + 1)" class="quadruple-item" :class="{highlight: q.i + 1 === highlight}">
+      <div v-for="q in quadruples" 
+           :key="q.i + 1" 
+           :ref="'quad-item-' + (q.i + 1)" 
+           class="quadruple-item" 
+           :class="{highlight: q.i + 1 === highlight}"
+           @click="scrollToQuad(q.reLink || q.i + 2)">
         <div class="quad-index">{{q.i + 1}}</div>
         <div class="quad-op">{{q.op}}</div>
         <div class="quad-arg">{{q.a1}}</div>
         <div class="quad-arg">{{q.a2}}</div>
-        <div class="quad-arg">{{q.re}}</div>
+        <div v-if="q.reLink !== undefined" class="quad-link">
+          (<span>{{q.reLink}}</span>)
+        </div>
+        <div v-else class="quad-arg">{{q.re}}</div>
         <div class="comment">{{q.cm}}</div>
       </div>
     </div>
@@ -18,7 +26,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
-import { Quadruple } from '../../../../core/main';
+import { Quadruple, QuadrupleArgType } from '../../../../core/main';
 
 @Component({
   name: 'quad-viewer'
@@ -34,9 +42,32 @@ export default class QuadViewer extends Vue {
   @Watch('highlight')
   handler(newVal: number, oldVal: number) {
     // scroll the quadruple list
+    this.scrollToQuad(newVal);
+  }
+
+  public get quadruples() {
+    if(!this.quadList || !this.quadList.length)
+      return [];
+    return this.quadList.map((quadruple:Quadruple, index: number) => {
+      return {
+        i: index,
+        op: quadruple.operatorName,
+        a1: quadruple.argument1.toString(),
+        a2: quadruple.argument2.toString(),
+        re: quadruple.result.toString(),
+        reLink: quadruple.result.type === QuadrupleArgType.QUAD_REF 
+          ? (quadruple.result as any).quadIndex : undefined,
+        cm: quadruple.comment,
+      }
+    });
+  }
+
+  public scrollToQuad(index: number){
     const list = this.$refs['quad-list'] as Element;
-    const hlgh = this.$refs['quad-item-' + newVal] as Element[];
-    const offsetTop = (hlgh[0] as any).offsetTop;
+    const newItem = this.$refs['quad-item-' + index] as Element[];
+    if(!newItem || !newItem[0])
+      return;
+    const offsetTop = (newItem[0] as any).offsetTop;
     const scrollTop = offsetTop > list.clientHeight / 2 ? offsetTop - list.clientHeight / 2 : 0;
     const oldScrollTop = list.scrollTop;
 
@@ -57,27 +88,12 @@ export default class QuadViewer extends Vue {
     };
     requestAnimationFrame(ani);
   }
-
-  public get quadruples() {
-    if(!this.quadList || !this.quadList.length)
-      return [];
-    return this.quadList.map((quadruple:Quadruple, index: number) => {
-      return {
-        i: index,
-        op: quadruple.operatorName,
-        a1: quadruple.argument1.toString(),
-        a2: quadruple.argument2.toString(),
-        re: quadruple.result.toString(),
-        cm: quadruple.comment,
-      }
-    });
-  }
 }
 </script>
 
 <style scoped>
 .root {
-  flex: 0;
+  flex: 1;
   min-width: 280px;
 }
 .list {
@@ -136,8 +152,11 @@ export default class QuadViewer extends Vue {
   font-size: 0.7em;
   flex: 0.7;
 }
-.quad-op, .quad-arg {
+.quad-op, .quad-arg, .quad-link{
   flex: 3;
   text-align: center;
+}
+.quad-link span {
+  color: #09c;
 }
 </style>

@@ -54,9 +54,7 @@
                 language='Picol'>
               </monaco-editor>
             </div>
-            <div class="right-aside">
-              <quad-viewer :quadList="quadrupleTable"></quad-viewer>
-            </div>
+            <ErrorList :errorList="errorList" />
           </ui-tab>
           <ui-tab icon="device_hub">
             <ast-viewer :ast="ast"></ast-viewer>
@@ -78,15 +76,16 @@
 import { Component, Vue, Lifecycle } from 'av-ts';
 import fileModel from '../model/file-model';
 import MonacoTokenizer from '../util/monaco-tokenizer';
-import MonacoEditor from './monaco-editor/monaco-editor';
 
+import ErrorList from './editor/error-list';
+import MonacoEditor from './editor/monaco-editor';
 import FilePanel from './file-panel/file-panel';
 import AstViewer from './syntax/ast-viewer';
 import Intermediate from './intermediate/intermediate';
 import QuadViewer from './intermediate/quad-viewer';
 import Execution from './execution/execution';
 
-import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext } from '../../../core/main';
+import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext, PicolError } from '../../../core/main';
 
 const loadLanguage = (): void => {
   const g: any = window;
@@ -99,6 +98,7 @@ const loadLanguage = (): void => {
   name: 'index',
   components: {
     MonacoEditor,
+    ErrorList,
     AstViewer,
     QuadViewer,
     Intermediate,
@@ -112,6 +112,7 @@ export default class Index extends Vue {
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
   ast: ParseNode|null = null
   quadrupleTable: Quadruple[] = []
+  errorList: PicolError[] = [];
   contextTree: ExecutionContext|null = null
 
   editorMounted(editor: monaco.editor.ICodeEditor) {
@@ -171,6 +172,7 @@ export default class Index extends Vue {
       this.ast = ast;
       monaco.editor.setModelMarkers(model, "Parser", []); // free of error
     } catch(e){
+      this.errorList.push(e as PicolError);
       const t: Token = e.token || tokenList[tokenList.length - 1];
       monaco.editor.setModelMarkers(model, "Parser", [{
         startLineNumber: t.position.line, 
@@ -340,6 +342,8 @@ a.github-corner {
 
 .main-stack .ui-tab {
   height: 100%;
+  display: flex;
+  width: 100%;
 }
 
 .main-stack .ui-tabs__body {
@@ -357,6 +361,7 @@ a.github-corner {
 
 .src-editor {
   height: 100%;
-  width: 100%;
+  width: calc(100% - 350px);
+  /*flex: 1;*/
 }
 </style>

@@ -30,5 +30,6 @@ export default class Intermediate extends Vue {
   display: flex;
   height: 100%;
   align-items: stretch;
+  width: 100%;
 }
 </style>

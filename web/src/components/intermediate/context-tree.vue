@@ -46,6 +46,7 @@
         <div class="nested-context">
           <context-tree 
             v-for="tree in contextTree.children" 
+            :key="tree"
             :contextTree="tree"/>
         </div>
       </div>
@@ -78,7 +79,7 @@ export default class ContextTree extends Vue {
 
 <style scoped>
   .root{
-    flex: 1;
+    flex: 2;
     position: relative;
     overflow: hidden;
     max-height: 45px;
