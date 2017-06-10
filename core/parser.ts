@@ -19,6 +19,12 @@ interface ITokenSource {
 
 const isEOF = (src: ITokenSource, peek: number = 0): boolean => src.peek(peek) && src.peek(peek).type === TokenType.EOF;
 
+const skipToCloseToken = (src: ITokenSource) => {
+  while (!isEOF(src) && !TokenTypeUtil.isCloseDelimiter(src.get().type)) {
+    src.adv();
+  }
+};
+
 type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode;
 
 // arr[a,b,c][a,b,c]
@@ -117,7 +123,6 @@ const parseExpressionUnit: ParseFunc = (src) => {
   const handleUnary = (type: ParseOperatorType, t: Token): ParseNode => {
     src.adv();
     const expr = parseExpressionUnit(src);
-    // if (expr === null) { throw ParserError.error('incomplete expression', src.get()); }
     return ParseNode.createExprUnary(type, expr, t);
   };
 
@@ -238,7 +243,7 @@ const parseExpression: ParseFunc = (src) => {
 
   const t = src.get();
   if (isEOF(src)) {
-    throw ParserError.error('incomplete expression', t);
+    src.err.throw(ParserError.error('incomplete expression', t));
   }
   if (!TokenTypeUtil.isBinOperator(t.type)) {
     return expr;
@@ -256,11 +261,11 @@ const parseArrayRefType: ParseFunc = (src, type) => {
   let dim = 1; // empty brackets is a reference to one dimension array: int[]
   while (true) {
     const comma = src.adv();
-    if (comma !== null && comma.type === TokenType.DIM_COMMA) {
+    if (comma.type === TokenType.DIM_COMMA) {
       dim++;
       continue;
     }
-    if (comma !== null && comma.type === TokenType.DIM_R_BRACKET) {
+    if (comma.type === TokenType.DIM_R_BRACKET) {
       src.adv();
       if (type.type === ParseNodeType.TYPE_ARRAY_REF) {
         type.value += dim;
@@ -270,7 +275,17 @@ const parseArrayRefType: ParseFunc = (src, type) => {
         return parseArrayRefType(src, arrayRefType);
       }
     }
-    throw ParserError.expect(', ]', t);
+    if (comma.type === TokenType.EOF) {
+      src.err.throw(ParserError.expect(', ]', t));
+    }
+
+    src.err.error(ParserError.expect(', ]', t));
+    if (TokenTypeUtil.isCloseDelimiter(comma.type)) {
+      const arrayRefType = ParseNode.createArrayRefType(type, dim, type.token);
+      return parseArrayRefType(src, arrayRefType);
+    } else {
+      src.adv();
+    }
   }
 };
 
@@ -278,21 +293,21 @@ const parseArrayRefType: ParseFunc = (src, type) => {
 const parseArrayDimension: ParseFunc = (src) => {
   const lBracket = src.get();
   if (lBracket.type !== TokenType.DIM_L_BRACKET) {
-    throw ParserError.expect('[', lBracket);
+    src.err.error(ParserError.expect('[', lBracket));
+  } else {
+    src.adv();
   }
-  src.adv();
+
   const node = new ParseNode(ParseNodeType.SEG_ARRAY_DIM, lBracket);
   while (true) {
     const exp = parseExpression(src);
-    if (exp === null) {
-      throw ParserError.expect('dim expr', src.get());
-    }
+    // if (exp === null) {
+    //   throw ParserError.expect('dim expr', src.get());
+    // }
     node.addChild(exp);
 
     const comma = src.get();
-    if (comma === null) {
-      throw ParserError.expect('] ,', comma);
-    }
+
     if (comma.type === TokenType.DIM_COMMA) {
       src.adv();
       continue;
@@ -301,7 +316,15 @@ const parseArrayDimension: ParseFunc = (src) => {
       src.adv();
       return node;
     }
-    throw ParserError.expect('] ,', comma);
+    if (isEOF(src)) {
+      src.err.throw(ParserError.error('incomplete array dimension', comma));
+    }
+    src.err.error(ParserError.expect('] ,', comma));
+    if (TokenTypeUtil.isCloseDelimiter(comma.type)) {
+      return node;
+    } else {
+      src.adv();
+    }
   }
 };
 
@@ -312,9 +335,7 @@ const parseArrayType: ParseFunc = (src, type) => {
     return type || null;
   }
   const dim = parseArrayDimension(src);
-  if (dim === null) {
-    throw ParserError.expect('Array dimension', t);
-  }
+
   if (type.type === ParseNodeType.TYPE_ARRAY) {
     // flatten array type declaration
     type.children[1].children.push(...dim.children);
@@ -346,11 +367,13 @@ const parseType: ParseFunc = (src) => {
 // { stat1; stat2; }
 const parseStatementSequence: ParseFunc = (src) => {
   const lCurly = src.get();
-  // if (lCurly.type !== TokenType.DIM_L_CURLY) {
-  //   return null;
-  // }
-  // skip left curly
-  src.adv();
+  if (lCurly.type !== TokenType.DIM_L_CURLY) {
+    src.err.error(ParserError.expect('{', lCurly));
+  } else {
+    // skip left curly
+    src.adv();
+  }
+
   const node = new ParseNode(ParseNodeType.STAT_SEQUENCE, lCurly);
   while (true) {
     const rCurly = src.get();
@@ -364,21 +387,19 @@ const parseStatementSequence: ParseFunc = (src) => {
       return node;
     }
     const child = parseStatement(src);
-    if (child) {
-      node.children.push(child);
-    } else {
-      throw ParserError.error('cannot parse token', src.get());
-    }
+    node.children.push(child);
   }
 };
 
 // return expr;
 const parseStatementReturn: ParseFunc = (src) => {
   const ret = src.get();
-  // if (ret === null || ret.type !== TokenType.KW_RETURN) {
-  //   return null;
-  // }
-  src.adv();
+  if (ret.type !== TokenType.KW_RETURN) {
+    src.err.error(ParserError.expect('return', ret));
+  } else {
+    src.adv();
+  }
+
   const voidExpr = src.get();
   if (voidExpr.type === TokenType.DIM_SEMICOLON) {
     src.adv();
@@ -401,10 +422,13 @@ const parseStatementReturn: ParseFunc = (src) => {
 // if(condition) {}, if(condition) {} else {}
 const parseStatementIf: ParseFunc = (src) => {
   const ifBegin = src.get();
-  // if (ifBegin === null || ifBegin.type !== TokenType.KW_IF) {
-  //   return null;
-  // }
-  const lParen = src.adv();
+  if (ifBegin.type !== TokenType.KW_IF) {
+    src.err.error(ParserError.expect('if', ifBegin));
+  } else {
+    src.adv();
+  }
+
+  const lParen = src.get();
   if (lParen.type !== TokenType.DIM_L_PAREN) {
     src.err.error(ParserError.expect('(', lParen));
   } else {
@@ -412,6 +436,7 @@ const parseStatementIf: ParseFunc = (src) => {
   }
 
   const condition = parseExpression(src);
+
   const rParen = src.get();
   if (rParen.type !== TokenType.DIM_R_PAREN) {
     src.err.error(ParserError.expect(')', rParen));
@@ -428,6 +453,7 @@ const parseStatementIf: ParseFunc = (src) => {
     node.addChild(blockIfTrue);
     return node;
   }
+
   // skip "else"
   src.adv();
   const blockIfFalse = parseStatement(src);
@@ -441,25 +467,32 @@ const parseStatementIf: ParseFunc = (src) => {
 // break;
 const parseStatementBreak: ParseFunc = (src) => {
   const br = src.get();
-  // if (br.type !== TokenType.KW_BREAK) {
-  //   return null;
-  // }
-  const semicolon = src.adv();
+  if (br.type !== TokenType.KW_BREAK) {
+    src.err.error(ParserError.expect('break', br));
+  } else {
+    src.adv();
+  }
+
+  const semicolon = src.get();
   if (semicolon.type !== TokenType.DIM_SEMICOLON) {
     src.err.error(ParserError.expect(';', semicolon));
   } else {
     src.adv();
   }
+
   return new ParseNode(ParseNodeType.STAT_BREAK, br);
 };
 
 // continue;
 const parseStatementContinue: ParseFunc = (src) => {
   const cnt = src.get();
-  // if (cnt.type !== TokenType.KW_CONTINUE) {
-  //   return null;
-  // }
-  const semicolon = src.adv();
+  if (cnt.type !== TokenType.KW_CONTINUE) {
+    src.err.error(ParserError.expect('continue', cnt));
+  } else {
+    src.adv();
+  }
+
+  const semicolon = src.get();
   if (semicolon.type !== TokenType.DIM_SEMICOLON) {
     src.err.error(ParserError.expect(';', semicolon));
   } else {
@@ -472,10 +505,12 @@ const parseStatementContinue: ParseFunc = (src) => {
 const parseSwitchBody: ParseFunc = (src) => {
   const lCurly = src.get();
   if (lCurly.type !== TokenType.DIM_L_CURLY) {
-    throw ParserError.expect('{', lCurly);
+    src.err.error(ParserError.expect('{', lCurly));
+  } else {
+    // skip left curly
+    src.adv();
   }
-  // skip left curly
-  src.adv();
+
   const node = new ParseNode(ParseNodeType.SEG_SWITCH_BODY, lCurly);
   while (true) {
     const next = src.get();
@@ -490,9 +525,7 @@ const parseSwitchBody: ParseFunc = (src) => {
     if (next.type === TokenType.KW_CASE) {
       src.adv();
       const expr = parseExpression(src);
-      if (expr === null) {
-        throw ParserError.expect('expr', src.get());
-      }
+
       const colon = src.get();
       if (colon.type !== TokenType.DIM_COLON) {
         src.err.error(ParserError.expect(':', colon));
@@ -500,6 +533,7 @@ const parseSwitchBody: ParseFunc = (src) => {
         // skip the colon
         src.adv();
       }
+
       const caseNode = new ParseNode(ParseNodeType.SEG_CASE_LABEL, next);
       caseNode.addChild(expr);
       node.addChild(caseNode);
@@ -523,22 +557,20 @@ const parseSwitchBody: ParseFunc = (src) => {
 
     // General statement
     const child = parseStatement(src);
-    if (child) {
-      node.children.push(child);
-    } else {
-      throw ParserError.error('cannot parse token', src.get());
-    }
+    node.children.push(child);
   }
-
 };
 
 // switch(exp) switchBody
 const parseStatementSwitch: ParseFunc = (src) => {
   const switchBegin = src.get();
-  // if (switchBegin.type !== TokenType.KW_SWITCH) {
-  //   return null;
-  // }
-  const lParen = src.adv();
+  if (switchBegin.type !== TokenType.KW_SWITCH) {
+    src.err.error(ParserError.expect('switch', switchBegin));
+  } else {
+    src.adv();
+  }
+
+  const lParen = src.get();
   if (lParen.type !== TokenType.DIM_L_PAREN) {
     src.err.error(ParserError.expect('(', lParen));
   } else {
@@ -546,6 +578,7 @@ const parseStatementSwitch: ParseFunc = (src) => {
   }
 
   const criteria = parseExpression(src);
+
   const rParen = src.get();
   if (rParen.type !== TokenType.DIM_R_PAREN) {
     src.err.error(ParserError.expect(')', rParen));
@@ -563,10 +596,12 @@ const parseStatementSwitch: ParseFunc = (src) => {
 // do {} while (exp);
 const parseStatementDo: ParseFunc = (src) => {
   const doBegin = src.get();
-  // if (doBegin.type !== TokenType.KW_DO) {
-  //   return null;
-  // }
-  src.adv();
+  if (doBegin.type !== TokenType.KW_DO) {
+    src.err.error(ParserError.expect('do', doBegin));
+  } else {
+    src.adv();
+  }
+
   const loopBlock = parseStatement(src);
   if (loopBlock === null) {
     src.err.error(ParserError.error('the loop block is required', src.get()));
@@ -678,27 +713,26 @@ const parseFunction: ParseFunc = (src, type, id) => {
   // this requires the type of return value and the identifier of function
   // is provided, current checking point is at the left parenthesis
   if (!type || !id) {
-    throw ParserError.error('function type and identifer are required', src.get());
+    src.err.throw(ParserError.error('function type and identifer are required', src.get()));
   }
+
   const lParen = src.get();
   if (lParen.type !== TokenType.DIM_L_PAREN) {
-    throw ParserError.expect('(', lParen);
+    src.err.error(ParserError.expect('(', lParen));
+  } else {
+    src.adv();
   }
-  src.adv();
 
   const param = parseFunctionParam(src);
 
   const rParen = src.get();
   if (rParen === null || rParen.type !== TokenType.DIM_R_PAREN) {
-    throw ParserError.expect(')', rParen);
+    src.err.error(ParserError.expect(')', rParen));
+  } else {
+    src.adv();
   }
-  src.adv();
 
   const body = parseStatementSequence(src);
-
-  if (body === null) {
-    throw ParserError.expect('body', src.get());
-  }
 
   const node = new ParseNode(ParseNodeType.STAT_FUNCTION, id.token);
   node.addChild(id);
@@ -718,9 +752,12 @@ const parseDeclareItem: ParseFunc = (src, id) => {
   if (t.type === TokenType.OP_ASS_VAL) {
     src.adv();
     const expr = parseExpression(src);
-    return expr && ParseNode.createDeclarationItem(id, expr, id.token);
+    return ParseNode.createDeclarationItem(id, expr, id.token);
   }
-  throw ParserError.expect(':= , ;', t);
+  src.err.error(ParserError.expect(':= , ;', t));
+  // skip following tokens till next separating delimiter
+  skipToCloseToken(src);
+  return ParseNode.createDeclarationItem(id, undefined, id.token);
 };
 
 // a, b:= 10, c := a
@@ -739,15 +776,16 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
     }
     if (id) {
       const item = parseDeclareItem(src, id);
-      // if (item === null) {
-      //   throw ParserError.error('cannot parse declaration item', src.get());
-      // }
       id = null;
       declareList.push(item);
     }
     t = src.get();
-    if (t === null || (t.type !== TokenType.DIM_COMMA && t.type !== TokenType.DIM_SEMICOLON)) {
-      throw ParserError.expect(', ;', t);
+    if (t.type !== TokenType.DIM_COMMA && t.type !== TokenType.DIM_SEMICOLON) {
+      src.err.error(ParserError.expect(', ;', t));
+      skipToCloseToken(src);
+    }
+    if (isEOF(src)) {
+      src.err.throw(ParserError.error('incomplete declare list', src.get()));
     }
 
     // skip ', ;'
@@ -792,12 +830,14 @@ const parseStatementDeclaration: ParseFunc = (src) => {
     // in this case, only one identifier is allowed after it
     if (t.type === TokenType.DIM_SEMICOLON) {
       src.adv();
-      return ParseNode.createDeclarationArray(type, id, type.token);
     } else if (t.type === TokenType.DIM_COMMA) {
-      throw ParserError.error('array declaration can only specify on variable', t);
+      src.err.error(ParserError.error('array declaration can only specify on variable', t));
+      while (src.adv().type !== TokenType.DIM_SEMICOLON && !isEOF(src)) { /* nothing */ }
     } else if (t.type === TokenType.OP_ASS_VAL) {
-      throw ParserError.error('array declaration cannot assign value', t);
+      src.err.error(ParserError.error('array declaration cannot assign value', t));
+      while (src.adv().type !== TokenType.DIM_SEMICOLON && !isEOF(src)) { /* nothing */ }
     }
+    return ParseNode.createDeclarationArray(type, id, type.token);
   } else if (type.type === ParseNodeType.TYPE_ARRAY_REF) {
     if ([TokenType.OP_ASS_VAL, TokenType.DIM_COMMA, TokenType.DIM_SEMICOLON].includes(t.type)) {
       const list = parseDeclareList(src, id);

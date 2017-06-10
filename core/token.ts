@@ -75,6 +75,10 @@ export const TokenTypeUtil = {
       TokenType.OP_REL_GTE, TokenType.OP_REL_LT, TokenType.OP_REL_LTE].includes(t),
   isBinLogical: (t: TokenType | null): boolean =>
     t !== null && [TokenType.OP_LOG_OR, TokenType.OP_LOG_AND].includes(t),
+  isCloseDelimiter: (t: TokenType | null): boolean =>
+    t !== null && [
+      TokenType.DIM_R_BRACKET, TokenType.DIM_R_CURLY, TokenType.DIM_R_PAREN, TokenType.DIM_COMMA, TokenType.DIM_COMMA,
+    ].includes(t),
   isBinOperator: (t: TokenType | null): boolean =>
     TokenTypeUtil.isAssOperator(t) || TokenTypeUtil.isBinArithmetic(t)
       || TokenTypeUtil.isBinLogical(t) || TokenTypeUtil.isBinRelational(t),
