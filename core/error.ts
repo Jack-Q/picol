@@ -4,6 +4,12 @@ export enum ErrorSeverity {
   INFO, WARN, ERROR, FATAL,
 }
 
+export const errorName = {
+  lexer: 'LexerError',
+  parser: 'ParserError',
+  generator: 'GeneratorError',
+};
+
 export class PicolError extends Error {
   public token: Token | undefined;
   public pos: IPosition | undefined;
@@ -17,7 +23,7 @@ export class PicolError extends Error {
 export class LexerError extends PicolError {
   constructor(message: string, pos: IPosition) {
     super(message);
-    this.name = 'LexerError';
+    this.name = errorName.lexer;
     this.pos = { ...pos };
   }
 }
@@ -34,7 +40,7 @@ export class ParserError extends PicolError {
     if (this.token) {
       this.pos = this.token.position;
     }
-    this.name = 'ParserError';
+    this.name = errorName.parser;
   }
 }
 
@@ -45,7 +51,7 @@ export class GeneratorError extends PicolError {
     if (this.token) {
       this.pos = this.token.position;
     }
-    this.name = 'GeneratorError';
+    this.name =  errorName.generator;
   }
 }
 

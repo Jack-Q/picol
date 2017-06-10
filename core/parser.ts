@@ -1,13 +1,20 @@
-import { ParserError } from './error';
+import { ErrorList, errorName, ParserError, PicolError } from './error';
 import {
   getBinaryParseOperator, getOperatorAssociativity,
   getOperatorPriority, ParseNode,
   ParseNodeType, ParseOperatorType } from './parser-node';
 import { PrimitiveType, Token, TokenType, TokenTypeUtil } from './token';
+
+export interface IParserResult {
+  errorList: PicolError[];
+  ast: ParseNode | null;
+}
+
 interface ITokenSource {
   get: () => Token | null;
   peek: (i?: number) => Token | null;
   adv: (i?: number) => Token | null;
+  err: ErrorList;
 }
 
 type ParseFunc = (src: ITokenSource, ...precedence: ParseNode[]) => ParseNode | null;
@@ -841,19 +848,32 @@ const parseSource: ParseFunc = (src) => {
   return node;
 };
 
-export const parser = (tokensWithWhiteSpace: Token[]): ParseNode => {
+export const parser = (tokensWithWhiteSpace: Token[]): IParserResult => {
   let tokenIndex = 0;
   const tokens = tokensWithWhiteSpace.filter((tk) => !TokenTypeUtil.isWhiteSpace(tk.type));
+  const errList: ErrorList = new ErrorList();
   const tokenSource: ITokenSource = {
     get: () => tokens[tokenIndex] || null,
     peek: (i: number = 1) => tokens[tokenIndex + i],
     adv: (i: number = 1) => tokens[tokenIndex += i],
+    err: errList,
   };
 
   // The root/initial is a source file
-  const ast = parseSource(tokenSource);
-  if (ast === null || tokenIndex !== tokens.length) {
-    throw ParserError.error('parsing failed', tokenSource.get());
+  let ast: ParseNode | null = null;
+  try {
+    ast = parseSource(tokenSource);
+  } catch (e) {
+    const parserErr = e as PicolError;
+    if (parserErr.name !== errorName.parser) {
+      // unexpected error, throw it again
+      throw e;
+    }
+    console.log(e);
+    ast = null;
   }
-  return ast;
+  return {
+    errorList: errList.errorList,
+    ast,
+  };
 };

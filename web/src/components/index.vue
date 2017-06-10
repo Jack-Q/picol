@@ -168,8 +168,24 @@ export default class Index extends Vue {
     monaco.editor.setModelMarkers(model, "Lexer", markers);
     
     try{
-      const ast = core.parser(tokenList);
+      const parserResult = core.parser(tokenList);
+      const ast = parserResult.ast;
       this.ast = ast;
+      if(parserResult.errorList.length > 0){
+        // add errors
+        monaco.editor.setModelMarkers(model, "Parser", parserResult.errorList.map((e) => {
+          const t = e.token || tokenList[tokenList.length - 1];
+          return {
+            startLineNumber: t.position.line, 
+            startColumn: t.position.col, 
+            endLineNumber: t.position.line, 
+            endColumn: t.position.col + t.literal.length, 
+            message: e.message, 
+            severity: monaco.Severity.Error,
+            source: "Parser"
+          };
+        }));
+      }
       monaco.editor.setModelMarkers(model, "Parser", []); // free of error
     } catch(e){
       this.errorList.push(e as PicolError);

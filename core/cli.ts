@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import Main, { Token, TokenType } from './main';
+import Main, { ParseNode, Token, TokenType } from './main';
 
 const printToken = (tokenIterator: Iterable<Token>): void => {
   for (const token of tokenIterator) {
@@ -27,7 +27,12 @@ const lexer = Main.lexer(testCode);
 const tokenList = Array.from(lexer);
 
 printToken(tokenList);
-const ast = Main.parser(tokenList);
+const parseResult = Main.parser(tokenList);
+if (!parseResult.ast) {
+  parseResult.errorList.map((err) => console.log(err.message));
+  process.exit(1);
+}
+const ast = parseResult.ast as ParseNode;
 ast.print();
 const intermediateContext = Main.generator(ast);
 
