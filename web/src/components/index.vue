@@ -45,7 +45,7 @@
               <monaco-editor
                 :code="code"
                 :options="editorOptions"
-                srcPath=''
+                srcPath='./'
                 width='100%'
                 height='100%'
                 theme='PicolTheme'
