@@ -141,8 +141,10 @@ export default class Index extends Vue {
     const markers: monaco.editor.IMarkerData[] = [];
     this.errorList = [];
 
+    // Lexer
     tokenList.map((t)=>{
       if(t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE){
+        this.errorList.push(PicolError.lexerError('unknown token', t));
         markers.push({
           startLineNumber: t.position.line, 
           startColumn: t.position.col, 
@@ -169,6 +171,7 @@ export default class Index extends Vue {
     })
     monaco.editor.setModelMarkers(model, "Lexer", markers);
     
+    // Parser
     try{
       // clean original errors
       monaco.editor.setModelMarkers(model, "Parser", []);
@@ -176,7 +179,6 @@ export default class Index extends Vue {
       const parserResult = core.parser(tokenList);
       const ast = parserResult.ast;
       this.ast = ast;
-      console.log(parserResult.errorList);
       if(parserResult.errorList.length > 0){
         // add errors to side list
         this.errorList.push(...parserResult.errorList);
@@ -208,6 +210,7 @@ export default class Index extends Vue {
       }]);
     }
 
+    // Generator
     try{
       if(this.ast){
         const context = core.generator(this.ast);

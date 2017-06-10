@@ -11,6 +11,11 @@ export const errorName = {
 };
 
 export class PicolError extends Error {
+  public static lexerError(message: string, t: Token) {
+    const err = new LexerError(message, t.position);
+    err.token = t;
+    return err;
+  }
   public token: Token | undefined;
   public pos: IPosition | undefined;
   public severity: ErrorSeverity = ErrorSeverity.ERROR;
@@ -69,6 +74,13 @@ export class ErrorList {
     err.severity = ErrorSeverity.ERROR;
     this.errorList.push(err);
   }
+  // set the severity to fatal but remain current execution flow
+  public fatal(err: PicolError) {
+    err.severity = ErrorSeverity.FATAL;
+    this.errorList.push(err);
+  }
+
+  // set the severity to fatal and interrupt current execution flow
   public throw(err: PicolError) {
     err.severity = ErrorSeverity.FATAL;
     this.errorList.push(err);

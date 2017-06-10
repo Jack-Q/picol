@@ -117,7 +117,7 @@ const parseExpressionUnit: ParseFunc = (src) => {
   const handleUnary = (type: ParseOperatorType, t: Token): ParseNode => {
     src.adv();
     const expr = parseExpressionUnit(src);
-    if (expr === null) { throw ParserError.error('incomplete expression', src.get()); }
+    // if (expr === null) { throw ParserError.error('incomplete expression', src.get()); }
     return ParseNode.createExprUnary(type, expr, t);
   };
 
@@ -910,8 +910,10 @@ export const parser = (tokensWithWhiteSpace: Token[]): IParserResult => {
       // unexpected error, throw it again
       throw e;
     }
-    console.log(e);
-    ast = null;
+
+    if (e !== errList.errorList[errList.errorList.length - 1]) {
+      errList.fatal(e);
+    }
   }
   return {
     errorList: errList.errorList,
