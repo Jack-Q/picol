@@ -40,7 +40,7 @@ export default class QuadViewer extends Vue {
     const scrollTop = offsetTop > list.clientHeight / 2 ? offsetTop - list.clientHeight / 2 : 0;
     const oldScrollTop = list.scrollTop;
 
-    if(screenTop == oldScrollTop) {
+    if(scrollTop === oldScrollTop) {
       return;
     }
 
@@ -48,8 +48,9 @@ export default class QuadViewer extends Vue {
     let delta = oldScrollTop - scrollTop;
     const ani = () => {
       delta *= 0.9;
-      if(delta < 3){
+      if(Math.abs(delta) < 3){
         list.scrollTop = scrollTop;
+        return;
       }
       list.scrollTop = scrollTop + delta;
       requestAnimationFrame(ani);

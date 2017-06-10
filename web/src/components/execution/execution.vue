@@ -23,28 +23,13 @@
     <div class="col">
       <ui-tabs>
         <ui-tab title="temp">
-          <div class="memory-view">
-            <div v-for="(c, i) in executor.temp" class="memory-view-row">
-              <div class="index">{{i}}</div>
-              <div class="value">{{c}}</div> 
-            </div>
-          </div>
+          <memory-view :memoryData='executor.temp' />
         </ui-tab>
         <ui-tab title="stack">
-          <div class="memory-view">
-            <div v-for="(c, i) in executor.stack" class="memory-view-row">
-              <div class="index">{{i}}</div>
-              <div class="value">{{c}}</div> 
-            </div>
-          </div>
+          <memory-view :memoryData='executor.stack' />
         </ui-tab>
         <ui-tab title="heap">
-          <div class="memory-view">
-            <div v-for="(c, i) in executor.heap" class="memory-view-row">
-              <div class="index">{{i}}</div>
-              <div class="value">{{c}}</div> 
-            </div>
-          </div>
+          <memory-view :memoryData='executor.heap' />
         </ui-tab>
       </ui-tabs>
     </div>
@@ -62,13 +47,14 @@ import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
 import { Quadruple, Executor } from '../../../../core/main';
 
 import QuadViewer from '../intermediate/quad-viewer';
+import MemoryView from './memory-view';
 
 @Component({
   name: 'execution',
   components: {
     QuadViewer,
+    MemoryView,
   },
-
 })
 export default class Execution extends Vue {
   @Prop program = p({type: Array})
@@ -153,20 +139,6 @@ export default class Execution extends Vue {
 
   .section-header {
      
-  }
-  .memory-view {
-    flex: 1;
-    overflow-y: auto;
-  }
-  .memory-view-row{
-    display: flex;
-    text-align: center;
-  }
-  .memory-view-row .index{
-    min-width: 35px;
-  }
-  .memory-view-row .value{
-    flex: 1;
   }
   .program{
     min-width: 280px;

@@ -10,42 +10,44 @@
       </div>
     </div>
     <div class="context-body">
-      <div v-if="isEmpty(contextTree.nameTable)" class="variable-list">
-        <div v-for="(n,i) in contextTree.nameTable" class="variable">
-          <pre class="name">{{i}}</pre> 
-          <span v-if="n.typeString == 'PRIMITIVE'" class="variable-type primitive">
-            <pre>{{n.info.toString()}}</pre>
-            <div class="stack-offset">{{n.stackOffset}}</div>
-          </span>
-          <span v-else-if="n.typeString == 'VOID'" class="variable-type void">
-            <pre>{{n.info.toString()}}</pre>
-          </span>
-          <span v-else-if="n.typeString == 'ARRAY'" class="variable-type array">
-            <pre>{{n.info.toString()}}</pre>
-            <div class="stack-offset">{{n.stackOffset}}</div>
-            array
-          </span>
-          <span v-else-if="n.typeString == 'ARRAY_REF'" class="variable-type array-ref">
-            <pre>{{n.info.toString()}}</pre>
-            <div class="stack-offset">{{n.stackOffset}}</div>
-            reference to array
-          </span>
-          <span v-else-if="n.typeString == 'FUNCTION'" class="variable-type function">
-            <pre>{{n.info.toString()}}</pre>
-            Address: {{n.info.entryAddress}}
-          </span>
-          <span v-else class="variable-type">
-            <pre>{{n.info.toString()}}</pre>
-          </span>
+      <div class="context-body-wrapper">
+        <div v-if="isEmpty(contextTree.nameTable)" class="variable-list">
+          <div v-for="(n,i) in contextTree.nameTable" class="variable">
+            <pre class="name">{{i}}</pre> 
+            <span v-if="n.typeString == 'PRIMITIVE'" class="variable-type primitive">
+              <pre>{{n.info.toString()}}</pre> {{n.info.size}} {{n.info.size > 1 ? 'bytes' : 'byte'}}
+              <div class="stack-offset">{{n.stackOffset}}</div>
+            </span>
+            <span v-else-if="n.typeString == 'VOID'" class="variable-type void">
+              <pre>{{n.info.toString()}}</pre> 
+            </span>
+            <span v-else-if="n.typeString == 'ARRAY'" class="variable-type array">
+              <pre>{{n.info.toString()}}</pre>
+              <div class="stack-offset">{{n.stackOffset}}</div>
+              {{n.asArr.dimension}}-dimension array
+            </span>
+            <span v-else-if="n.typeString == 'ARRAY_REF'" class="variable-type array-ref">
+              <pre>{{n.info.toString()}}</pre>
+              <div class="stack-offset">{{n.stackOffset}}</div>
+              reference to {{n.asArrRef.dimension}}-dimension array
+            </span>
+            <span v-else-if="n.typeString == 'FUNCTION'" class="variable-type function">
+              <pre>{{n.info.toString()}}</pre>
+              function, entry at: {{n.info.entryAddress}}{{n.info.entryAddress < 0 ? ', defined by language' : ''}}
+            </span>
+            <span v-else class="variable-type">
+              <pre>{{n.info.toString()}}</pre>
+            </span>
+          </div>
         </div>
-      </div>
-      <div v-else>
-        No symbol defined in this context
-      </div>
-      <div class="nested-context">
-        <context-tree 
-          v-for="tree in contextTree.children" 
-          :contextTree="tree"/>
+        <div v-else>
+          No symbol defined in this context
+        </div>
+        <div class="nested-context">
+          <context-tree 
+            v-for="tree in contextTree.children" 
+            :contextTree="tree"/>
+        </div>
       </div>
     </div>
   </div>
@@ -126,19 +128,26 @@ export default class ContextTree extends Vue {
   }
   .context-body{
     position: relative;
-    padding-left: 20px;
     transition: all ease 400ms;
     max-height: 0px;
     overflow-y: auto;
     opacity: 0;
   }
-  .context-body::before{
+  .context-body-wrapper {
+    padding: 0;
+    position: relative;
+    transition: all ease 400ms;
+  }
+  .root.open .context-body-wrapper {
+    padding: 10px 0 20px 20px;
+  }
+  .context-body-wrapper::before{
     content: '';
     position: absolute;
     display: block;
-    height: 100%;
     left: 8px;
     top: 0;
+    height: 100%;
     z-index: 1;
     border-left: dashed 2px #ccc;
   }
@@ -146,7 +155,6 @@ export default class ContextTree extends Vue {
     max-height: 100vh;
   }
   .root.open .context-body {
-    padding: 10px 0 20px 20px;
     opacity: 1;
     max-height: calc(100% - 45px);
   }

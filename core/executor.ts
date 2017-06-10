@@ -92,7 +92,7 @@ export class Executor {
           const result = this.calcByOperator(quad.operator, val1.value, val2.value);
           const target = quad.result as QuadrupleArgVarTemp;
           console.log(target, result);
-          this.temp[target.tempIndex] = result.value;
+          this.temp.splice(target.tempIndex, 1, result.value);
         }
         break;
 
@@ -119,7 +119,7 @@ export class Executor {
         {
           const data = this.getValue(quad.argument1);
           const target = quad.result as QuadrupleArgVarTemp;
-          this.temp[target.tempIndex] = data.value;
+          this.temp.splice(target.tempIndex, 1, data.value);
         }
         break;
 
@@ -178,7 +178,7 @@ export class Executor {
         {
           const val1 = this.getValue(quad.argument1);
           const target = quad.result as QuadrupleArgVarTemp;
-          this.temp[target.tempIndex] = val1.value;
+          this.temp.splice(target.tempIndex, 1, val1.value);
         }
         break;
       // heap memory management
@@ -187,7 +187,7 @@ export class Executor {
           const size = this.getValue(quad.argument1).value;
           const target = quad.result as QuadrupleArgVarTemp;
           const address = this.allocateHeap(size);
-          this.temp[target.tempIndex] = address;
+          this.temp.splice(target.tempIndex, 1, address);
         }
         break;
       case QuadrupleOperator.M_FREE: // free heap memory
@@ -219,15 +219,15 @@ export class Executor {
   private stackFill(addr: number, val: IExecutionVal) {
     if (addr >= HEAP_BASE) {
       // assign to heap
-      this.heap[addr - HEAP_BASE] = val.value;
+      this.heap.splice(addr - HEAP_BASE, 1, val.value);
       for (let i = 1; i < val.span; i++) {
-        this.heap[addr + i - HEAP_BASE] = -1;
+        this.heap.splice(addr + i - HEAP_BASE, 1, -1);
       }
     } else {
       // assign to stack
-      this.stack[this.frameBase + addr] = val.value;
+      this.stack.splice(this.frameBase + addr, 1, val.value);
       for (let i = 1; i < val.span; i++) {
-        this.stack[this.frameBase + addr + i] = -1;
+        this.stack.splice(this.frameBase + addr + i, 1, -1);
       }
     }
   }
