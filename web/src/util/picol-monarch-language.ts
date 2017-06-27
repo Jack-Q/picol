@@ -81,6 +81,7 @@ const picolLanguage: IPicolMonarchLanguage = {
       [/[{}()\[\]]/, '@brackets'],
 
       [/\/\/(.*)$/, { token: 'comment'}],
+      [/\/\*/,       'comment', '@comment' ],
       [/[;,]/, 'delimiter'],
       [/@symbols/, {
         cases: {
@@ -89,6 +90,12 @@ const picolLanguage: IPicolMonarchLanguage = {
       }],
       [/[ \t]+/, 'whitespace'],
       [/./, { token: 'invalid' }],
+    ],
+    comment: [
+      [/[^\/*]+/, 'comment' ],
+      // [/\/\*/,    'comment', '@push' ],    // nested comment
+      [/\*\//,    'comment', '@pop'  ],
+      [/[\/*]/,   'comment' ],
     ],
   },
   tokenPostfix: '',

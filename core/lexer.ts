@@ -11,6 +11,7 @@ const defaultOption: ILexerOption = {
 
 type Peek = (i?: number) => string;
 type CharPredicate = (ch: string) => boolean;
+type PeekCharPredicate = (ch: string, i: number) => boolean;
 
 const util = {
   isNewLine: ((ch) => '\n\r'.indexOf(ch) >= 0) as CharPredicate,
@@ -19,10 +20,10 @@ const util = {
   isIdentifierMid: ((ch) => /[A-Za-z_\$0-9]/.test(ch)) as CharPredicate,
   isDigit: ((ch) => /\d/.test(ch)) as CharPredicate,
 
-  peekIf: (peek: Peek, predicate: CharPredicate, limit: number = Infinity, stopLineEnd: boolean = true): string => {
+  peekIf: (peek: Peek, predicate: PeekCharPredicate, limit: number = Infinity, stopLineEnd: boolean = true): string => {
     for (let i = 0, str = ''; ; i++) {
       const ch = peek(i);
-      if (!predicate(ch) || (stopLineEnd && util.isNewLine(ch)) || ch === undefined) {
+      if (!predicate(ch, i) || (stopLineEnd && util.isNewLine(ch)) || ch === undefined) {
         return str;
       }
       if (i >= limit) {
@@ -54,9 +55,26 @@ const matchers:
       const initPos = { ...getPos() };
       adv(literal.length - 1 + 1); // 1 more advance to skip the new line
       return new Token(TokenType.SP_COMMENT_LN, literal, initPos);
-    } else {
-      return null;
     }
+    return null;
+  },
+  // Match block comment
+  (ch, adv, peek, getPos) => {
+    if (ch === '/' && peek() === '*') {
+      const literal = util.peekIf(peek, (p, i) => peek(i - 1) !== '*' || peek(i) !== '/', Infinity, false);
+      const initPos = { ...getPos() };
+      adv(literal.length);
+
+      console.log(literal);
+      console.log(peek(0) , peek(1));
+      // check whether the section is correctly closed
+      if (!literal.endsWith('*/')) {
+        return new Token(TokenType.INV_NO_MATCH, literal, initPos, 'unclosed multiline comment');
+      }
+
+      return new Token(TokenType.SP_COMMENT_LN, literal, initPos);
+    }
+    return null;
   },
   // Match identifier, keyword, build-in type
   (ch, adv, peek, getPos) => {
@@ -196,6 +214,7 @@ export const lexer = function*(source: string, option: ILexerOption = defaultOpt
   ctrl: while (pos.pos < len) {
     const ch = adv();
     if (ch.length) {
+      console.log(ch);
       for (const matcher of matchers) {
         const token = matcher(ch, adv, peek, getPos);
         if (token) {
@@ -203,8 +222,8 @@ export const lexer = function*(source: string, option: ILexerOption = defaultOpt
           continue ctrl;
         }
       }
+      // match unrecognized token as ``invalid token''
       yield new Token(TokenType.INV_NO_MATCH, ch, pos, `invalid token '${ch}'`);
-      // throw new LexerError(`invalid token '${ch}'`, pos);
     }
   }
   // eventually, append an EOF at the end of the token list
