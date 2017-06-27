@@ -101,7 +101,7 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
   endColumn: t.position.col + t.literal.length, 
   message, 
   severity: monaco.Severity.Error,
-  source: "Lexer"
+  source: source
 });
 
 @Component({

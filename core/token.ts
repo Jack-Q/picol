@@ -62,7 +62,7 @@ export enum TokenType {
 
 export const TokenTypeUtil = {
   isWhiteSpace: (t: TokenType | null): boolean =>
-    t !== null && [TokenType.SP_WHITE, TokenType.SP_COMMENT_LN].includes(t),
+    t !== null && [TokenType.SP_WHITE, TokenType.SP_COMMENT_LN, TokenType.INV_NO_MATCH].includes(t),
   isType: (t: TokenType | null): boolean =>
     t !== null && [TokenType.ID_TYPE].includes(t),
   isAssOperator: (t: TokenType | null): boolean =>
