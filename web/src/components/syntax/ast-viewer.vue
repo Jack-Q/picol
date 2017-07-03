@@ -1,11 +1,11 @@
 <template>
-  <div class="root">
-    <div v-if="ast">
+  <div class="root" v-if="ast">
+    <div>
       <ast-node :ast='ast'></ast-node>
     </div>
-    <div v-else class="tip">
-      Load sample files or type in your own program
-    </div>
+  </div>
+  <div v-else class="tip">
+    Load sample files or type in your own program
   </div>
 </template>
 
@@ -29,5 +29,13 @@ export default class AstViewer extends Vue {
   height: 100%;
   width: 100%;
   overflow: auto;
+}
+
+.tip {
+  flex: 1;
+  margin: auto;
+  text-align: center;
+  font-size: 1.5em;
+  color: #ccc;
 }
 </style>

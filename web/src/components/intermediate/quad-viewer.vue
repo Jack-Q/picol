@@ -159,4 +159,11 @@ export default class QuadViewer extends Vue {
 .quad-link span {
   color: #09c;
 }
+
+.tip {
+  text-align: center;
+  font-size: 1.5em;
+  color: #ccc;
+  height: 100%;
+}
 </style>

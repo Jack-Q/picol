@@ -56,18 +56,18 @@
     <div class="col">
       <ui-tabs>
         <ui-tab title="temp">
-          <memory-view :memoryData='executor.temp' />
+          <memory-view :memoryData='executor.temp'></memory-view>
         </ui-tab>
         <ui-tab title="stack">
-          <memory-view :memoryData='executor.stack' />
+          <memory-view :memoryData='executor.stack'></memory-view>
         </ui-tab>
         <ui-tab title="heap">
-          <memory-view :memoryData='executor.heap' />
+          <memory-view :memoryData='executor.heap'></memory-view>
         </ui-tab>
       </ui-tabs>
     </div>
     <div class="program">
-      <quad-viewer :quadList="program" :highlight="executor.pc" />
+      <quad-viewer :quadList="program" :highlight="executor.pc"></quad-viewer>
     </div>
   </div>
   <div v-else>

@@ -4,7 +4,8 @@
 
   [![Build Status](https://travis-ci.org/Jack-Q/picol.svg?branch=master)](https://travis-ci.org/Jack-Q/picol) 
   [![Dependency Status](https://david-dm.org/Jack-Q/picol.svg)](https://david-dm.org/Jack-Q/picol)
-  
+  [![devDependencies Status](https://david-dm.org/Jack-Q/picol/dev-status.svg)](https://david-dm.org/Jack-Q/picol?type=dev)
+
   [>> View Picol Online](https://git.io/picol)
 
 ## Picol as Pico-Language

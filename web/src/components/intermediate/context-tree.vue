@@ -52,7 +52,7 @@
       </div>
     </div>
   </div>
-  <div v-else>
+  <div v-else class="tip">
     No context
   </div>
 </template>
@@ -158,5 +158,11 @@ export default class ContextTree extends Vue {
   .root.open .context-body {
     opacity: 1;
     max-height: calc(100% - 45px);
+  }
+  .tip {
+    text-align: center;
+    font-size: 1.5em;
+    color: #ccc;
+    height: 100%;
   }
 </style>

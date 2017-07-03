@@ -1,6 +1,6 @@
 <template>
   <div class="memory-view" v-if="memoryData && memoryData.length">
-    <div v-for="(c, i) in memoryData" class="memory-view-row">
+    <div v-for="(c, i) in memoryData" class="memory-view-row" :key="i">
       <pre class="index">{{i}}</pre>
       <pre class="value">{{c}}</pre> 
     </div>
@@ -52,9 +52,10 @@ export default class MemoryView extends Vue {
     flex: 1;
   }
   .empty-tip{
+    flex: 1;
+    margin: auto;
     text-align: center;
     font-size: 1.5em;
     color: #ccc;
-    height: 100%;
   }
 </style>

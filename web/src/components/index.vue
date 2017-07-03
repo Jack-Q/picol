@@ -55,7 +55,7 @@
                 language='Picol'>
               </monaco-editor>
             </div>
-            <ErrorList :errorList="errorList" />
+            <ErrorList :errorList="errorList" @selectPosition="selectPosition($event)" />
           </ui-tab>
           <ui-tab icon="device_hub">
             <ast-viewer :ast="ast"></ast-viewer>
@@ -86,7 +86,7 @@ import Intermediate from './intermediate/intermediate';
 import QuadViewer from './intermediate/quad-viewer';
 import Execution from './execution/execution';
 
-import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext, PicolError } from '../../../core/main';
+import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext, PicolError, RangePosition } from '../../../core/main';
 
 const loadLanguage = (): void => {
   const g: any = window;
@@ -244,6 +244,15 @@ export default class Index extends Vue {
     }
     monaco.editor.setModelMarkers(model, "Generator", generatorMarkers);
 
+  }
+
+  selectPosition(pos: RangePosition) {
+    this.editor.setSelection({
+      startLineNumber: pos.startLine,
+      startColumn: pos.startCol,
+      endLineNumber: pos.endLine,
+      endColumn: pos.endCol,
+    })
   }
 }
 

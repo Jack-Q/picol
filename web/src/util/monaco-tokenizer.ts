@@ -12,7 +12,10 @@ const picolTheme: monaco.editor.ITheme = {
       { token: 'operator', foreground: 'aabafa', fontStyle: 'bold' },
       { token: 'delimiter', foreground: '5adaca', fontStyle: 'bold' },
   ],
-};
+  colors: {
+    'editor.selectionHighlightBackground': '#000',
+  },
+} as monaco.editor.ITheme;
 
 const registerLanguage = (monaco: any): void => {
 

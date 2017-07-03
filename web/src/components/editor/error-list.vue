@@ -14,11 +14,16 @@
             <div class="err-src" v-if="e.name !== 'PicolError'">
               {{e.name.replace('Error', '')}}
             </div>
-            <div class="pos" v-if="e.pos">
+            <div class="pos" v-if="e.pos" @click="selectPosition(e.pos)">
               <span class="pos-line">{{e.pos.startLine}}</span>
               <span class="pos-col">{{e.pos.startCol}}</span>
             </div>
-            {{e.message}}
+            <span v-if="e.interpolatedMessage">
+              
+            </span>
+            <span v-else>
+              {{e.message}}
+            </span>
           </div>
         </div>
       </div>
@@ -31,7 +36,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
-import { ErrorSeverity } from '../../../../core/main';
+import { ErrorSeverity, RangePosition } from '../../../../core/main';
 
 @Component({
   name: 'error-list'
@@ -50,6 +55,9 @@ export default class ErrorList extends Vue {
       FATAL: 'block',
     }
     return iconMap[this.getSeverity(severity)];
+  }
+  selectPosition(pos: RangePosition) {
+    this.$emit('selectPosition', pos);
   }
 }
 </script>
@@ -133,6 +141,7 @@ export default class ErrorList extends Vue {
 
   .pos {
     background: #ecd;
+    cursor: pointer;
   }
 
   .pos-col::before, .pos-line::before {
@@ -140,11 +149,14 @@ export default class ErrorList extends Vue {
     font-weight: 900;
     font-size: 0.9em;
     color: #999;
+    cursor: pointer;
   }
   .pos-col::before {
     content: 'COL';
+    cursor: pointer;
   }
   .pos-line::before {
     content: 'LN';
+    cursor: pointer;
   }
 </style>
