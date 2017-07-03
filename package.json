@@ -74,5 +74,13 @@
   "browserslist": [
     "last 2 versions"
   ],
+  "semistandard": {
+    "ignore": [
+      "/dist",
+      "/build",
+      "web/build",
+      "web/config"
+    ]
+  },
   "license": "MIT"
 }
