@@ -49,6 +49,7 @@
                 width='100%'
                 height='100%'
                 theme='PicolTheme'
+                @saveContent=""
                 @mounted="editorMounted($event)"
                 @codeChange="editorCodeChange"
                 language='Picol'>
@@ -129,8 +130,37 @@ export default class Index extends Vue {
   }
 
   editorMounted(editor: monaco.editor.ICodeEditor) {
-    this.editor = editor;
+    this.editor = editor ;
     loadLanguage();
+    
+    const standAloneCodeEditor = this.editor as monaco.editor.IStandaloneCodeEditor;
+    standAloneCodeEditor.addAction({
+      // Save Content Action (Ctrl + S)
+      id: 'editor-save-content',
+      label: 'Save Content to Storage',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S],
+      run: (editor) => {
+        fileModel.saveFile(fileModel.currentFile);
+      }
+    });
+    standAloneCodeEditor.addAction({
+      // Reload Content Action (Ctrl + R)
+      id: 'editor-reload-content',
+      label: 'Reload Content from Storage',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_R],
+      run: (editor) => {
+        fileModel.reload(fileModel.currentFile);
+      }
+    });
+    standAloneCodeEditor.addAction({
+      // Reload Content Action (Ctrl + R)
+      id: 'editor-delete-content',
+      label: 'Delete Current File',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Delete],
+      run: (editor) => {
+        fileModel.deleteFile(fileModel.currentFile);
+      }
+    });
   }
 
   @Lifecycle beforeUpdate(){

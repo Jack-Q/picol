@@ -34,6 +34,7 @@ const defaultMonacoEditorOptions: monaco.editor.IEditorOptions = {
   glyphMargin: true,
   // language: 'Picol',
   theme: 'PicolTheme',
+  renderWhitespace: 'boundary',
 };
 
 export default {
