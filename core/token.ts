@@ -1,4 +1,48 @@
-export interface IPosition { pos: number; line: number; col: number; }
+/**
+ * Represents the position of point
+ */
+export interface IPointPosition {
+  offsetStart: number;
+  line: number;
+  col: number;
+}
+
+/**
+ * Represents the position of a code section
+ */
+export class RangePosition {
+  public static fromPoint = (point: IPointPosition): RangePosition => {
+    const pos = new RangePosition().markStartPoint(point).markEndPoint(point);
+    pos.endCol++;
+    pos.endOffset++;
+    return pos;
+  }
+
+  public get length(): number {
+    return this.endOffset - this.startOffset;
+  }
+
+  public startOffset: number;
+  public startLine: number;
+  public startCol: number;
+
+  public endOffset: number;
+  public endLine: number;
+  public endCol: number;
+  public markStartPoint = (point: IPointPosition): RangePosition => {
+    this.startOffset = point.offsetStart;
+    this.startCol = point.col;
+    this.startLine = point.line;
+    return this;
+  }
+
+  public markEndPoint = (point: IPointPosition): RangePosition => {
+    this.endOffset = point.offsetStart;
+    this.endCol = point.col;
+    this.endLine = point.line;
+    return this;
+  }
+}
 
 export enum TokenType {
   SP_WHITE,
@@ -126,13 +170,13 @@ const KeywordMap: { [op: string]: TokenType } = {
 };
 
 export class Token {
-  public static createOperatorToken(literal: string, position: IPosition): Token|null {
+  public static createOperatorToken(literal: string, position: RangePosition): Token|null {
     if (OperatorMap[literal]) {
       return new Token(OperatorMap[literal], literal, position);
     }
     return null;
   }
-  public static createIdentifierToken(literal: string, position: IPosition): Token {
+  public static createIdentifierToken(literal: string, position: RangePosition): Token {
     const newToken = (type: TokenType, val?: any) => new Token(type, literal, position, val);
     if (KeywordMap[literal]) {
       return newToken(KeywordMap[literal]);
@@ -151,16 +195,16 @@ export class Token {
 
   public type: TokenType;
   public literal: string;
-  public position: IPosition;
+  public position: RangePosition;
   public value: any;
 
-  constructor(type: TokenType, literal: string, position: IPosition, value?: any) {
+  constructor(type: TokenType, literal: string, position: RangePosition, value?: any) {
     this.type = type;
     this.literal = literal;
-    this.position = { ...position };
+    this.position = position;
     this.value = value;
   }
 
-  public getPositionString = (): string => `ln: ${this.position.line}, col: ${this.position.col}`;
+  public getPositionString = (): string => `ln: ${this.position.startLine}, col: ${this.position.startCol}`;
 
 }

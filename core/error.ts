@@ -1,4 +1,4 @@
-import { IPosition, Token } from './token';
+import { RangePosition, Token } from './token';
 
 export enum ErrorSeverity {
   INFO, WARN, ERROR, FATAL,
@@ -17,7 +17,7 @@ export class PicolError extends Error {
     return err;
   }
   public token: Token | undefined;
-  public pos: IPosition | undefined;
+  public pos: RangePosition | undefined;
   public severity: ErrorSeverity = ErrorSeverity.ERROR;
   constructor(message: string) {
     super(message);
@@ -26,7 +26,7 @@ export class PicolError extends Error {
 }
 
 export class LexerError extends PicolError {
-  constructor(message: string, pos: IPosition) {
+  constructor(message: string, pos: RangePosition) {
     super(message);
     this.name = errorName.lexer;
     this.pos = { ...pos };

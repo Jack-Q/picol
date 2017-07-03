@@ -96,10 +96,10 @@ const loadLanguage = (): void => {
 };
 
 const createMarker = (source: string, message: string, t: Token): monaco.editor.IMarkerData => ({
-  startLineNumber: t.position.line, 
-  startColumn: t.position.col, 
-  endLineNumber: t.position.line, 
-  endColumn: t.position.col + t.literal.length, 
+  startLineNumber: t.position.startLine, 
+  startColumn: t.position.startCol, 
+  endLineNumber: t.position.endLine || t.position.startLine, 
+  endColumn: t.position.endCol || t.position.startCol + t.literal.length, 
   message, 
   severity: monaco.Severity.Error,
   source: source
@@ -153,7 +153,7 @@ export default class Index extends Vue {
       }
     });
     standAloneCodeEditor.addAction({
-      // Reload Content Action (Ctrl + R)
+      // Delete File Action (Ctrl + Shift + Delete)
       id: 'editor-delete-content',
       label: 'Delete Current File',
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Delete],
