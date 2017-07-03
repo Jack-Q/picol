@@ -65,8 +65,6 @@ const matchers:
       const initPos = { ...getPos() };
       adv(literal.length);
 
-      console.log(literal);
-      console.log(peek(0) , peek(1));
       // check whether the section is correctly closed
       if (!literal.endsWith('*/')) {
         return new Token(TokenType.INV_NO_MATCH, literal, initPos, 'unclosed multiline comment');
@@ -214,7 +212,6 @@ export const lexer = function*(source: string, option: ILexerOption = defaultOpt
   ctrl: while (pos.pos < len) {
     const ch = adv();
     if (ch.length) {
-      console.log(ch);
       for (const matcher of matchers) {
         const token = matcher(ch, adv, peek, getPos);
         if (token) {
