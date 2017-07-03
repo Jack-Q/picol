@@ -11,7 +11,7 @@ import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 @Component({
   name: 'list-view'
 })
-export default class QuadViewer extends Vue {
+export default class ListViewer extends Vue {
   @Prop on = p({type: Boolean})
 }
 </script>

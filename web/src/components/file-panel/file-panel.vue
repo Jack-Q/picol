@@ -26,15 +26,9 @@
               {{f.src !== f.savedSrc ? '*' : ''}}
             </div>
             <div class="inline-actions">
-              <div class="inline-action" @click.stop="model.reload(f)">
-                <ui-icon>settings_backup_restore</ui-icon>
-              </div>
-              <div class="inline-action" @click.stop="model.saveFile(f)">
-                <ui-icon>save</ui-icon>
-              </div>
-              <div class="inline-action" @click.stop="model.deleteFile(f)">
-                <ui-icon>delete</ui-icon>
-              </div>
+              <inline-action icon="settings_backup_restore" tooltip="reload from storage" @click="model.reload(f)"></inline-action>
+              <inline-action icon="save" tooltip="save to storage" @click="model.saveFile(f)"></inline-action>
+              <inline-action icon="delete" tooltip="delete" @click="model.deleteFile(f)"></inline-action>
             </div>
           </div>
         </list-item>
@@ -48,11 +42,13 @@
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 import fileModel, {IEditingFile} from '../../model/file-model';
 import ListItem from './list-item';
+import InlineAction from './inline-action';
 
 @Component({
   name: 'left-panel',
   components: {
     ListItem,
+    InlineAction,
   },
 })
 export default class LeftPanel extends Vue {
@@ -148,19 +144,6 @@ export default class LeftPanel extends Vue {
 .editing-list-item.current::after{
   right: 0;
   opacity: 1;
-}
-
-.inline-action {
-  padding: 10px 5px; 
-  display: inline-block;
-  margin: -10px 0;
-  color: #aaa;
-  transition: all ease 400ms;
-  cursor: pointer;
-}
-
-.inline-action:hover {
-  color: #5cf;
 }
 
 .editing-list-item:hover .inline-actions{

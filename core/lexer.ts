@@ -23,7 +23,9 @@ const util = {
   peekIf: (peek: Peek, predicate: PeekCharPredicate, limit: number = Infinity, stopLineEnd: boolean = true): string => {
     for (let i = 0, str = ''; ; i++) {
       const ch = peek(i);
-      if (!predicate(ch, i) || (stopLineEnd && util.isNewLine(ch)) || ch === undefined) {
+      if (ch === undefined
+        || (stopLineEnd && util.isNewLine(ch))
+        || !predicate(ch, i)) {
         return str;
       }
       if (i >= limit) {
@@ -61,13 +63,15 @@ const matchers:
   // Match block comment
   (ch, adv, peek, getPos) => {
     if (ch === '/' && peek() === '*') {
-      const literal = util.peekIf(peek, (p, i) => peek(i - 1) !== '*' || peek(i) !== '/', Infinity, false);
+      const literal = util.peekIf(peek,
+        (p, i) => !(i >= 4 && peek(i - 2) === '*' && peek(i - 1) === '/'),
+        Infinity, false);
       const initPos = { ...getPos() };
-      adv(literal.length);
+      adv(literal.length - 1);
 
       // check whether the section is correctly closed
       if (!literal.endsWith('*/')) {
-        return new Token(TokenType.INV_NO_MATCH, literal, initPos, 'unclosed multiline comment');
+        return new Token(TokenType.INV_NO_MATCH, literal, initPos, 'unclosed multiline comment' + literal);
       }
 
       return new Token(TokenType.SP_COMMENT_LN, literal, initPos);

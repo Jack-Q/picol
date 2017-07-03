@@ -10,6 +10,8 @@ export interface IEditingFile {
   model?: monaco.editor.IModel;
 }
 
+const STORAGE_KEY = 'file-model';
+
 class FileModel {
   public current: number;
   public fileList: IEditingFile[] = [];
@@ -23,7 +25,7 @@ class FileModel {
   }
 
   constructor() {
-    const storeModel = window.localStorage.getItem('file-model');
+    const storeModel = window.localStorage.getItem(STORAGE_KEY);
     if (storeModel) {
       const store = JSON.parse(storeModel) as IEditingFile[];
       if (store.some && !store.some((f) =>
@@ -40,10 +42,41 @@ class FileModel {
       this.addNew();
       this.loadTemplate('default');
     }
+
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === STORAGE_KEY && ev.oldValue !== ev.newValue) {
+        console.log('update');
+        if (ev.oldValue === this.getSerializeData()) {
+          const newStoreModel = window.localStorage.getItem(STORAGE_KEY);
+          const newStore = newStoreModel && JSON.parse(newStoreModel) as IEditingFile[];
+          if (!newStore || !newStore.length) {
+            // all files are cleaned
+            this.deleteAll();
+            return;
+          }
+          this.fileList.forEach((curFile) => {
+            const newFile = newStore.find((nf) => nf.name === curFile.name);
+            if (!newFile) {
+              if (curFile.model) {
+                curFile.model.dispose();
+              }
+            } else {
+              newFile.model = curFile.model;
+              if (newFile.model) {
+                newFile.model.setValue(newFile.src);
+              }
+            }
+          });
+          this.fileList = newStore;
+          if (this.current >= this.fileList.length) {
+            this.current = 0;
+          }
+        }
+      }
+    });
+
     setInterval(() => {
-      window.localStorage.setItem('file-model', JSON.stringify(this.fileList.map((f) => ({
-        name: f.name, savedSrc: f.savedSrc, src: f.src,
-      }))));
+      window.localStorage.setItem(STORAGE_KEY, this.getSerializeData());
     }, 100);
   }
 
@@ -116,6 +149,12 @@ class FileModel {
 
   public select(index: number) {
     this.current = index;
+  }
+
+  private getSerializeData() {
+    return JSON.stringify(this.fileList.map((f) => ({
+      name: f.name, savedSrc: f.savedSrc, src: f.src,
+    })));
   }
 }
 
