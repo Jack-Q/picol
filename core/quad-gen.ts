@@ -258,6 +258,7 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
 };
 
 const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
+  console.log(node);
   const func = generateExpression(ctx, node.children[0]).toValue(ctx);
   const funcInfo = ctx.getEntryInfo(node.children[0].value).asFunc;
   const argList = node.children[1].children;

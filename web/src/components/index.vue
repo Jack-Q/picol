@@ -130,7 +130,7 @@ export default class Index extends Vue {
   }
 
   editorMounted(editor: monaco.editor.ICodeEditor) {
-    this.editor = editor ;
+    this.editor = editor;
     loadLanguage();
     
     const standAloneCodeEditor = this.editor as monaco.editor.IStandaloneCodeEditor;

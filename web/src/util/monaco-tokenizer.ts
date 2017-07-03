@@ -2,7 +2,7 @@
 import picolLanguage from './picol-monarch-language';
 import picolSample from './picol-sample';
 
-const picolTheme: monaco.editor.ITheme = {
+const picolTheme: monaco.editor.IStandaloneThemeData = {
   base: 'vs',
   inherit: true,
   rules: [
@@ -13,9 +13,9 @@ const picolTheme: monaco.editor.ITheme = {
       { token: 'delimiter', foreground: '5adaca', fontStyle: 'bold' },
   ],
   colors: {
-    'editor.selectionHighlightBackground': '#000',
+    'editor.inactiveSelectionBackground': '#aabbcc',
   },
-} as monaco.editor.ITheme;
+};
 
 const registerLanguage = (monaco: any): void => {
 
@@ -24,6 +24,7 @@ const registerLanguage = (monaco: any): void => {
   monaco.languages.setMonarchTokensProvider('Picol', picolLanguage);
 
   monaco.editor.defineTheme('PicolTheme', picolTheme);
+  monaco.editor.setTheme('PicolTheme');
 };
 
 const defaultMonacoEditorOptions: monaco.editor.IEditorOptions = {
@@ -36,7 +37,7 @@ const defaultMonacoEditorOptions: monaco.editor.IEditorOptions = {
   automaticLayout: true,
   glyphMargin: true,
   // language: 'Picol',
-  theme: 'PicolTheme',
+  // theme: 'PicolTheme',
   renderWhitespace: 'boundary',
 };
 
