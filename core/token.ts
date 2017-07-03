@@ -13,8 +13,6 @@ export interface IPointPosition {
 export class RangePosition {
   public static fromPoint = (point: IPointPosition): RangePosition => {
     const pos = new RangePosition().markStartPoint(point).markEndPoint(point);
-    pos.endCol++;
-    pos.endOffset++;
     return pos;
   }
 
@@ -40,6 +38,8 @@ export class RangePosition {
     this.endOffset = point.offsetStart;
     this.endCol = point.col;
     this.endLine = point.line;
+    this.endCol++;
+    this.endOffset++;
     return this;
   }
 }

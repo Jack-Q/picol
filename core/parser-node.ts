@@ -255,6 +255,10 @@ export class ParseNode {
   public children: ParseNode[] = [];
   public token: Token | undefined;
 
+  public get position() {
+    return this.token ? this.token.position : null;
+  }
+
   constructor(type: ParseNodeType, token: Token | undefined | undefined, value?: any) {
     this.type = type;
     this.value = value;

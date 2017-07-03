@@ -5,7 +5,7 @@ import {
   QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
 import { createValueType, SymbolEntry, SymbolEntryType, ValueType, ValueTypeInfo } from './symbol-entry';
-import { PrimitiveType } from './token';
+import { PrimitiveType, RangePosition } from './token';
 
 interface INameStatus {
   isDefined: boolean;
@@ -63,7 +63,8 @@ export class ExecutionContext {
     if (recursive && this.parent) {
       return this.parent.getEntry(name, recursive);
     }
-    throw new GeneratorError('no symbol defined with name ' + name, undefined);
+    throw new GeneratorError('no symbol defined with name ' + name +
+      '\n please use checkName before getEntry', undefined);
   }
 
   public checkName(name: string, current: boolean = true): INameStatus {
@@ -167,13 +168,14 @@ export class GeneratorContext {
 
   public get addEntry() {
     return {
-      func: (name: string) => this.currentContext.addEntry(SymbolEntry.create.func(name)),
-      prim: (name: string, type: PrimitiveType) =>
-        this.currentContext.addEntry(SymbolEntry.create.prim(name, type)),
-      arr: (name: string, type: PrimitiveType, dim: number) =>
-        this.currentContext.addEntry(SymbolEntry.create.arr(name, type, dim)),
-      arrRef: (name: string, type: PrimitiveType, dim: number) =>
-        this.currentContext.addEntry(SymbolEntry.create.arrRef(name, type, dim)),
+      func: (name: string, srcPosition: RangePosition | null) =>
+        this.currentContext.addEntry(SymbolEntry.create.func(name, srcPosition)),
+      prim: (name: string, type: PrimitiveType, srcPosition: RangePosition | null) =>
+        this.currentContext.addEntry(SymbolEntry.create.prim(name, type, srcPosition)),
+      arr: (name: string, type: PrimitiveType, dim: number, srcPosition: RangePosition | null) =>
+        this.currentContext.addEntry(SymbolEntry.create.arr(name, type, dim, srcPosition)),
+      arrRef: (name: string, type: PrimitiveType, dim: number, srcPosition: RangePosition | null) =>
+        this.currentContext.addEntry(SymbolEntry.create.arrRef(name, type, dim, srcPosition)),
     };
   }
 
@@ -295,7 +297,7 @@ export class GeneratorContext {
 
     // register build-in functions to global context
     buildInFunctions.map((func) => {
-      this.addEntry.func(func.name);
+      this.addEntry.func(func.name, null);
       const funcEntry = this.getEntryInfo(func.name).asFunc;
       funcEntry.returnType = func.return;
       funcEntry.entryAddress = func.id;

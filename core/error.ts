@@ -23,6 +23,10 @@ export class PicolError extends Error {
     super(message);
     this.name = 'PicolError';
   }
+  public withPos(pos: RangePosition) {
+    this.pos = pos;
+    return this;
+  }
 }
 
 export class LexerError extends PicolError {

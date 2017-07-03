@@ -1,4 +1,4 @@
-import { PrimitiveType } from './token';
+import { PrimitiveType, RangePosition } from './token';
 
 export interface IFunctionParameter {
   name: string;
@@ -119,24 +119,27 @@ class TypeInfoFunction extends SymbolEntryInfo {
 
 export class SymbolEntry {
   public static create = {
-    func: (name: string) => new SymbolEntry(name, SymbolEntryType.FUNCTION, new TypeInfoFunction()),
-    prim: (name: string, type: PrimitiveType) =>
-      new SymbolEntry(name, SymbolEntryType.PRIMITIVE, new TypeInfoPrimitive(type)),
-    arr: (name: string, type: PrimitiveType, dim: number) =>
-      new SymbolEntry(name, SymbolEntryType.ARRAY, new TypeInfoArray(type, dim)),
-    arrRef: (name: string, type: PrimitiveType, dim: number) =>
-      new SymbolEntry(name, SymbolEntryType.ARRAY_REF, new TypeInfoArrayRef(type, dim)),
+    func: (name: string, srcPosition: RangePosition | null) =>
+      new SymbolEntry(name, SymbolEntryType.FUNCTION, new TypeInfoFunction(), srcPosition),
+    prim: (name: string, type: PrimitiveType, srcPosition: RangePosition | null) =>
+      new SymbolEntry(name, SymbolEntryType.PRIMITIVE, new TypeInfoPrimitive(type), srcPosition),
+    arr: (name: string, type: PrimitiveType, dim: number, srcPosition: RangePosition | null) =>
+      new SymbolEntry(name, SymbolEntryType.ARRAY, new TypeInfoArray(type, dim), srcPosition),
+    arrRef: (name: string, type: PrimitiveType, dim: number, srcPosition: RangePosition | null) =>
+      new SymbolEntry(name, SymbolEntryType.ARRAY_REF, new TypeInfoArrayRef(type, dim), srcPosition),
   };
 
   public name: string;
   public stackOffset: number = -1;
   public type: SymbolEntryType;
   public info: SymbolEntryInfo;
+  public srcPosition: RangePosition | null;
 
-  public constructor(name: string, type: SymbolEntryType, info: SymbolEntryInfo) {
+  public constructor(name: string, type: SymbolEntryType, info: SymbolEntryInfo, srcPosition: RangePosition | null) {
     this.name = name;
     this.type = type;
     this.info = info;
+    this.srcPosition = srcPosition;
   }
 
   public get asFunc(): TypeInfoFunction {

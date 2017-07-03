@@ -6,14 +6,14 @@
         errors / warnings
       </div>
       <div class="error-list">
-        <div v-for="e in errorList" class="error-item" :class="getSeverity(e.severity)">
+        <div v-for="e in errorList" :key="e" class="error-item" :class="getSeverity(e.severity)">
           <div class="severity">
             <ui-icon>{{getIconName(e.severity)}}</ui-icon>
           </div>
           <div class="message">
             <div class="pos" v-if="e.pos">
-              <span class="pos-line">{{e.pos.line}}</span>
-              <span class="pos-col">{{e.pos.col}}</span>
+              <span class="pos-line">{{e.pos.startLine}}</span>
+              <span class="pos-col">{{e.pos.startCol}}</span>
             </div>
             {{e.message}}
           </div>

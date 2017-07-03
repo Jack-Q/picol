@@ -367,8 +367,16 @@ const generateExpression: generateRule<AttrExpr> = (ctx, node) => {
       return generateExpressionArrAccess(ctx, node);
     case ParseNodeType.EXPR_FUNC_INVOKE:
       return generateExpressionFuncInvoke(ctx, node);
-    case ParseNodeType.VAL_IDENTIFIER:
+    case ParseNodeType.VAL_IDENTIFIER: {
+      const nameStatue = ctx.checkName(node.value);
+      if (!nameStatue.isDefined) {
+        ctx.err.error(new GeneratorError('variable "' + node.value + '" is not defined', node.token));
+        ctx.err.warn(new GeneratorError('variable is assumed as an temporary variable', node.token));
+        console.log(node);
+        return new AttrExpr(ctx.getTempVar());
+      }
       return new AttrExpr(ctx.getEntry(node.value));
+    }
     case ParseNodeType.VAL_UNINITIALIZED:
     default:
       return AttrExpr.newPrimValue(PrimitiveType.VOID, null);
@@ -397,7 +405,7 @@ const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
       ctx.err.error(new GeneratorError('variable is defined ' + name, i.children[0].token));
     } else {
       // for redefinition, use the first definition
-      ctx.addEntry.prim(name, type);
+      ctx.addEntry.prim(name, type, i.children[0].position);
     }
 
     const ref = ctx.getEntry(name);
@@ -433,7 +441,8 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
     return attr.valid();
   }
 
-  ctx.addEntry.arr(arrayName, primitiveType, arrDimensionDef.children.length); // dimension, type, name
+  ctx.addEntry.arr(arrayName, primitiveType,
+    arrDimensionDef.children.length, node.children[1].position);
   const arrEntryInfo = ctx.getEntryInfo(arrayName).asArr;
 
   let size: QuadrupleArg | undefined;
@@ -479,7 +488,7 @@ const generateDeclarationArrayRef: generateRule<IAttr> = (ctx, node) => {
     if (nameStatus.isDefined && nameStatus.currentContext) {
       ctx.err.error(new GeneratorError('variable redefinition', i.children[0].token));
     } else {
-      ctx.addEntry.arrRef(name, type, dim);
+      ctx.addEntry.arrRef(name, type, dim, i.children[0].position);
     }
 
     const ref = ctx.getEntry(name);
@@ -506,7 +515,8 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
   if (nameStatus.isDefined && nameStatus.currentContext) {
     ctx.err.error(new GeneratorError('name redefinition: ' + name, node.children[0].token));
   } else {
-    ctx.addEntry.func(name); // function name is exposed outside of function block
+     // function name is exposed outside of function block
+    ctx.addEntry.func(name, node.position);
   }
 
   // wrap in function block context
@@ -515,8 +525,8 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
   }, () => {
     const functionInfo = ctx.getEntryInfo(name).asFunc;
 
-    ctx.addEntry.prim('?ppc', PrimitiveType.INT);
-    ctx.addEntry.prim('?addr', PrimitiveType.INT);
+    ctx.addEntry.prim('?ppc', PrimitiveType.INT, null);
+    ctx.addEntry.prim('?addr', PrimitiveType.INT, null);
 
     // return value
     const returnType = getItemType(node.children[1]);
@@ -524,9 +534,9 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
     // allocate address for return value, no space allocated for void function
     // return is allocated after parameter
     if (returnType.type === ValueType.ARRAY_REF) {
-      ctx.addEntry.arrRef('?ret', returnType.primitiveType, returnType.dim);
+      ctx.addEntry.arrRef('?ret', returnType.primitiveType, returnType.dim, null);
     } else if (returnType.type === ValueType.PRIMITIVE) {
-      ctx.addEntry.prim('?ret', returnType.primitiveType);
+      ctx.addEntry.prim('?ret', returnType.primitiveType, null);
     }
 
     // parameters
@@ -542,9 +552,10 @@ const generateFunction: generateRule<IAttr> = (ctx, node) => {
       } else {
         // add argument to function block
         if (parameter.type.type === ValueType.ARRAY_REF) {
-          ctx.addEntry.arrRef(parameter.name, parameter.type.primitiveType, parameter.type.dim);
+          ctx.addEntry.arrRef(parameter.name, parameter.type.primitiveType,
+            parameter.type.dim, item.children[1].position);
         } else if (parameter.type.type === ValueType.PRIMITIVE) {
-          ctx.addEntry.prim(parameter.name, parameter.type.primitiveType);
+          ctx.addEntry.prim(parameter.name, parameter.type.primitiveType, item.children[1].position);
         }
         functionInfo.parameterList.push(parameter);
       }
