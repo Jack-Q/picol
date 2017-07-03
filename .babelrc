@@ -5,7 +5,7 @@
   ],
   "plugins": [
     "transform-runtime",
-    "transform-class-properties",
+    "transform-class-properties"
   ],
   "comments": false,
   "env": {

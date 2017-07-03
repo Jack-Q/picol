@@ -99,6 +99,6 @@ const picolLanguage: IPicolMonarchLanguage = {
     ],
   },
   tokenPostfix: '',
-};
+} as any; // use any to suppress tsc complaint about the short hands declaration
 
 export default picolLanguage;
