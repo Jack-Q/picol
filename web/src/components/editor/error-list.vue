@@ -11,6 +11,9 @@
             <ui-icon>{{getIconName(e.severity)}}</ui-icon>
           </div>
           <div class="message">
+            <div class="err-src" v-if="e.name !== 'PicolError'">
+              {{e.name.replace('Error', '')}}
+            </div>
             <div class="pos" v-if="e.pos">
               <span class="pos-line">{{e.pos.startLine}}</span>
               <span class="pos-col">{{e.pos.startCol}}</span>
@@ -114,14 +117,22 @@ export default class ErrorList extends Vue {
     flex: 1;
     font-size: 0.9em;
   }
-  .pos {
+
+  .err-src, .pos {
     display: inline-block;
-    background: #ecd;
     border-radius: 5px;
     padding: 0 5px;
     height: 22px;
     line-height: 22px;
     font-size: 16px;
+  }
+
+  .err-src {
+    background: #aef;
+  }
+
+  .pos {
+    background: #ecd;
   }
 
   .pos-col::before, .pos-line::before {
