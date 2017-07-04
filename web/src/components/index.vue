@@ -380,13 +380,22 @@ a.github-corner {
   display: flex;
 }
 .body > div {
-  height: 100%;
+  position: relative;
   overflow-y: hidden;
 }
 .left-aside {
   flex: 1;
   min-width: 220px;
 }
+
+/* fix the height positioning issue in Safari */
+.left-aside > div, .main-stack > div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
 .main-stack {
   flex: 4;
   position: relative;

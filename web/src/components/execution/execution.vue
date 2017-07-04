@@ -182,6 +182,13 @@ export default class Execution extends Vue {
   .program{
     min-width: 280px;
     flex: 1;
+    position: relative;
+  }
+
+  .program > div {
+    position: absolute;
+    top: 0;
+    bottom: 0;
   }
 
   .section {
