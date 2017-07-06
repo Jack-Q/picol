@@ -24,7 +24,7 @@ export const getPrimitiveSize = (type: PrimitiveType | 'ref'): number => {
   return 0;
 };
 
-class SymbolEntryInfo {
+export class SymbolEntryInfo {
 }
 
 export enum ValueType {

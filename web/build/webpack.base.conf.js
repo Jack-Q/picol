@@ -1,5 +1,4 @@
 var path = require('path')
-var CopyWebpackPlugin = require('copy-webpack-plugin');
 var utils = require('./utils')
 var config = require('../config')
 var vueLoaderConfig = require('./vue-loader.conf')
@@ -71,10 +70,8 @@ module.exports = {
       }
     ]
   },
-  plugins: [new CopyWebpackPlugin([
-      {
-        from: 'node_modules/monaco-editor/min/vs',
-        to: 'vs'
-      }
-    ])]
+  plugins: [
+    // Add webpack plugins in this section which are shared among 
+    // development and deployment configuration
+  ]
 }

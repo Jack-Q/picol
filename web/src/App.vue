@@ -25,6 +25,9 @@ export default class App extends Vue {
   width: 100%;
 }
 
+code, pre, keygen, kbd {
+  font-family: 'monaco', 'Consolas', 'melon', 'Courier New', Courier, monospace;
+}
 
 *,
 *::before,
