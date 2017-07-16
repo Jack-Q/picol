@@ -251,7 +251,6 @@ const parseExpression: ParseFunc = (src) => {
   const expr = parseExpressionUnit(src);
 
   const t = src.get();
-  console.log('expr', t);
   if (isEOF(src)) {
     src.err.throw(ParserError.error('incomplete expression', t));
   }

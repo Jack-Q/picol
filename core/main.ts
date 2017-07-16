@@ -9,5 +9,6 @@ export { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
 export { Quadruple, QuadrupleArgType } from './quadruple';
 export { ExecutionContext } from './context';
 export { Executor } from './executor';
+export { buildInFunctions } from './build-in';
 
 export default { lexer, generator, parser };

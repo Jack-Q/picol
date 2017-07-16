@@ -4,7 +4,15 @@
       <div class="section">status</div>
       <dl>
         <dt>PC</dt>
-        <dd>{{executor.pc}}</dd>
+        <dd>
+          {{executor.pc}}
+          <span v-if="getBuildInFunc()">
+            <code ref="buildin-tip" class="build-in-tip">
+              {{getBuildInFunc().name}}
+              <ui-tooltip trigger="buildin-tip">Build-in function: {{getBuildInFunc().description}}</ui-tooltip>
+            </code>
+          </span>
+        </dd>
         <dt>Frame Base</dt>
         <dd>{{executor.frameBase}}</dd>
       </dl>
@@ -77,7 +85,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
-import { Quadruple, Executor, ErrorSeverity } from '../../../../core/main';
+import { Quadruple, Executor, ErrorSeverity, buildInFunctions } from '../../../../core/main';
 
 import QuadViewer from '../intermediate/quad-viewer';
 import MemoryView from './memory-view';
@@ -126,20 +134,26 @@ export default class Execution extends Vue {
   }
 
   autoExecuteCallback(){
-    this.step();
+    this.executor.step();
     this.autoExecuteHandle = setTimeout(() => this.autoExecuteCallback(), 1000 * this.calcSpeed);
   }
 
   step() {
+    this.toggleAutoExecute(false);
     this.executor.step();
   }
 
   reset() {
+    this.toggleAutoExecute(false);
     this.executor.reset();
   }
 
   getSeverity(severity: ErrorSeverity): string{
     return ErrorSeverity[severity];
+  }
+
+  getBuildInFunc() {
+    return this.executor.pc < 0 ? buildInFunctions.find(f => f.id === this.executor.pc) : false;
   }
 }
 </script>
@@ -231,5 +245,11 @@ export default class Execution extends Vue {
     text-align: left;
     flex: 1;
     border-left: solid #ccc 1px;
+  }
+  .build-in-tip{
+    font-size: 0.65em;
+    padding: 2px 4px;
+    background: #ccc;
+    border-radius: 3px;
   }
 </style>

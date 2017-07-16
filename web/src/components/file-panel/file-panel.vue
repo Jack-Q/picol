@@ -81,6 +81,8 @@ export default class LeftPanel extends Vue {
   padding: 10px 20px;
 } 
 .editing-content{
+  
+  min-height: 200px;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -95,6 +97,7 @@ export default class LeftPanel extends Vue {
 .editing-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -106,6 +109,7 @@ export default class LeftPanel extends Vue {
   color: #999;
 }
 .editing-list-item{
+  overflow: hidden;
   position: relative;
   z-index: 1;
   display: flex;
