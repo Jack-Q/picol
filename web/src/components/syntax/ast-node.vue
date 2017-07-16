@@ -4,14 +4,14 @@
       <ui-icon>code</ui-icon>
       Src Root
     </div>
-    <ast-node v-for="node in ast.children" :ast='node' :key="node"></ast-node>
+    <ast-node v-for="(node, i) in ast.children" :ast='node' :key="i"></ast-node>
   </div>
   <div v-else-if="nodeType === 'STAT_SEQUENCE'" class='node-block'>
     <div class="node-header">
       <ui-icon>list</ui-icon>
       statement list
     </div>
-    <ast-node v-for="node in ast.children" :ast='node' :key="node"></ast-node>
+    <ast-node v-for="(node, i) in ast.children" :ast='node' :key="i"></ast-node>
   </div>
   <div v-else-if="nodeType === 'STAT_FUNCTION'" class='node-block'>
     <div class="node-header">
@@ -26,7 +26,7 @@
       <div class="expr-node-header"><div class="type-icon">ret</div></div>
       <ast-node :ast='ast.children[1]' /> 
     </div>
-    <div  v-for="(node, i) in ast.children[2].children" :key="node" class="node-block expr-inline-node">
+    <div  v-for="(node, i) in ast.children[2].children" :key="i" class="node-block expr-inline-node">
       <div class="expr-node-header"><div class="type-icon">par {{i}}</div></div>
       <div class="node-block expr-inline-node">
         <div class="expr-node-header"><div class="type-icon">name</div></div>
@@ -37,7 +37,7 @@
         <ast-node :ast='node.children[0]' />
       </div>
     </div>
-    <ast-node v-for="node in ast.children[3].children" :key="node" :ast='node'></ast-node>
+    <ast-node v-for="(node, i) in ast.children[3].children" :key="i" :ast='node'></ast-node>
   </div>
   <div v-else-if="nodeType === 'STAT_DECLARATION_PRIM'" class='node-block'>
     <div class="node-header">
@@ -48,7 +48,7 @@
       <div class="expr-node-header"><div class="type-icon">type</div></div>
       <ast-node :ast='ast.children[0]' /> 
     </div>
-    <div  v-for="dec in ast.children[1].children" :key="dec" class="node-block expr-inline-node">
+    <div  v-for="(dec, i) in ast.children[1].children" :key="i" class="node-block expr-inline-node">
       <div class="expr-node-header"><div class="type-icon">decl</div></div>
       <div class="node-block expr-inline-node">
         <div class="expr-node-header"><div class="type-icon">name</div></div>
@@ -73,7 +73,7 @@
       <div class="expr-node-header"><div class="type-icon">dim</div></div>
       <pre>{{ast.children[0].value}}</pre> 
     </div>
-    <div  v-for="dec in ast.children[1].children" :key="dec" class="node-block expr-inline-node">
+    <div  v-for="(dec, i) in ast.children[1].children" :key="i" class="node-block expr-inline-node">
       <div class="expr-node-header"><div class="type-icon">decl</div></div>
       <div class="node-block expr-inline-node">
         <div class="expr-node-header"><div class="type-icon">name</div></div>
@@ -98,7 +98,7 @@
       <div class="expr-node-header"><div class="type-icon">name</div></div>
       <pre> {{ast.children[1].value}} </pre>
     </div>
-    <div v-for="(dec, i) in ast.children[0].children[1].children" :key="dec" class="node-block expr-inline-node">
+    <div v-for="(dec, i) in ast.children[0].children[1].children" :key="i" class="node-block expr-inline-node">
       <div class="expr-node-header"><div class="type-icon">dim {{i}}</div></div>
       <ast-expr :ast='dec' />
     </div>
@@ -114,12 +114,12 @@
     </div>
     <div class="node-block">
       <div class="node-header"><ui-icon>done</ui-icon>Then</div>
-      <ast-node v-for="node in ast.children[1].children" :key="node" :ast='node'></ast-node>
+      <ast-node v-for="(node, i) in ast.children[1].children" :key="i" :ast='node'></ast-node>
     </div>
 
     <div v-if="ast.children[2]" class="node-block">
       <div class="node-header"><ui-icon>clear</ui-icon>Else</div>
-      <ast-node v-for="node in ast.children[2].children" :key="node" :ast='node'></ast-node>
+      <ast-node v-for="(node, i) in ast.children[2].children" :key="i" :ast='node'></ast-node>
     </div>
   </div>
   <div v-else-if="nodeType === 'STAT_SWITCH'" class='node-block'>
@@ -156,7 +156,7 @@
     </div>
     <div class="node-block">
       <div class="node-header"><ui-icon>replay</ui-icon>loop body</div>
-      <ast-node v-for="node in ast.children[1].children" :key="node" :ast='node'></ast-node>
+      <ast-node v-for="(node, i) in ast.children[1].children" :key="i" :ast='node'></ast-node>
     </div>
   </div>
   <div v-else-if="nodeType === 'STAT_DO'" class='node-block'>
@@ -166,7 +166,7 @@
     </div>
     <div class="node-block">
       <div class="node-header"><ui-icon>replay</ui-icon>loop body</div>
-      <ast-node v-for="node in ast.children[0].children" :key="node" :ast='node'></ast-node>
+      <ast-node v-for="(node, i) in ast.children[0].children" :key="i" :ast='node'></ast-node>
     </div>
     <div class="node-block">
       <div class="node-header"><ui-icon>help_outline</ui-icon>Condition</div>

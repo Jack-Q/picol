@@ -215,6 +215,7 @@ export default class Index extends Vue {
         });
       }
     } catch(e){
+      console.log(e)
       this.errorList.push(e as PicolError);
       const t: Token = e.token || tokenList[tokenList.length - 1];
       parserMarkers.push(createMarker("Parser", e.message, t));

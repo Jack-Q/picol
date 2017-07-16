@@ -99,11 +99,11 @@ const matchers:
     const initPos = { ...getPos() };
     if (operatorSymbols.indexOf(ch) >= 0) {
       if (operatorSymbols.indexOf(peek()) >= 0) {
-        const op = Token.createOperatorToken(ch + peek(), RangePosition.fromPoint(initPos));
-        if (op) {
+        const combinedOp = Token.createOperatorToken(ch + peek(), RangePosition.fromPoint(initPos));
+        if (combinedOp) {
           adv(1);
-          op.position.markEndPoint(getPos());
-          return op;
+          combinedOp.position.markEndPoint(getPos());
+          return combinedOp;
         }
       }
       const op = Token.createOperatorToken(ch, RangePosition.fromPoint(initPos));
@@ -151,6 +151,17 @@ const matchers:
       }
       adv(pos - 1);
       rangePos.markEndPoint(getPos());
+
+      // check number format
+      if (isFloat) {
+        // float
+      } else {
+        // integer
+        if (val < - (2 ** 15) || val > 2 ** 15 - 1) {
+          return new Token(TokenType.INV_VALUE, lit, rangePos, 'invalid integer literal');
+        }
+      }
+
       return new Token(
         isFloat ? TokenType.VAL_NUM_FLOAT : TokenType.VAL_NUM_INT,
         lit, rangePos, val);

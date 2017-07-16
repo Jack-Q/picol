@@ -83,9 +83,9 @@ class AttrExpr implements IAttr {
   public toValue(ctx: GeneratorContext): QuadrupleArg {
     if (!this.isBoolean) {
       if (this.value.type === QuadrupleArgType.ARRAY_ADDR) {
-        const temp = ctx.getTempVar();
-        ctx.addQuadruple(QuadrupleOperator.A_RET, this.value, Q_NULL, temp, 'retrieve value of array reference');
-        return temp;
+        const arrayTemp = ctx.getTempVar();
+        ctx.addQuadruple(QuadrupleOperator.A_RET, this.value, Q_NULL, arrayTemp, 'retrieve value of array reference');
+        return arrayTemp;
       }
       return this.value;
     }
@@ -155,15 +155,18 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   // value operand
   const opVal = operand.toValue(ctx);
 
+  // Unary posit operation
   if (node.value === ParseOperatorType.UNI_POSIT) {
-    // TODO: value type conversion whrn processing the unary posit operator
+    // TODO: value type conversion when processing the unary posit operator
     return AttrExpr.newQuadrupleRef(opVal, operand.entryType);
   }
+
+  // Unary negate operation
   if (node.value === ParseOperatorType.UNI_NEGATE) {
     // TODO: type check
-    const temp = ctx.getTempVar();
-    ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), opVal, temp);
-    return AttrExpr.newQuadrupleRef(temp, operand.entryType);
+    const invTemp = ctx.getTempVar();
+    ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), opVal, invTemp);
+    return AttrExpr.newQuadrupleRef(invTemp, operand.entryType);
   }
 
   // Self-increment / decrement
@@ -208,20 +211,20 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
   if (op === ParseOperatorType.BIN_LOG_AND || op === ParseOperatorType.BIN_LOG_OR) {
     const isAnd = op === ParseOperatorType.BIN_LOG_AND;
 
-    const lOp = generateExpression(ctx, node.children[0]);
-    lOp.toBoolean(ctx);
-    ctx.backPatchChain(isAnd ? lOp.trueChain : lOp.falseChain, ctx.nextQuadrupleIndex);
+    const logicalLeftOp = generateExpression(ctx, node.children[0]);
+    logicalLeftOp.toBoolean(ctx);
+    ctx.backPatchChain(isAnd ? logicalLeftOp.trueChain : logicalLeftOp.falseChain, ctx.nextQuadrupleIndex);
 
-    const rOp = generateExpression(ctx, node.children[1]);
-    rOp.toBoolean(ctx);
+    const logicalRightOp = generateExpression(ctx, node.children[1]);
+    logicalRightOp.toBoolean(ctx);
     if (isAnd) {
       // AND operator
-      return AttrExpr.newBoolExpr(rOp.trueChain,
-        ctx.mergeChain(lOp.falseChain, rOp.falseChain));
+      return AttrExpr.newBoolExpr(logicalRightOp.trueChain,
+        ctx.mergeChain(logicalLeftOp.falseChain, logicalRightOp.falseChain));
     } else {
       // OR operator
-      return AttrExpr.newBoolExpr(ctx.mergeChain(lOp.trueChain, rOp.trueChain),
-        rOp.falseChain);
+      return AttrExpr.newBoolExpr(ctx.mergeChain(logicalLeftOp.trueChain, logicalRightOp.trueChain),
+        logicalRightOp.falseChain);
     }
   }
   const lOp = generateExpression(ctx, node.children[0]);

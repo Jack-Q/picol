@@ -6,7 +6,7 @@
         errors / warnings
       </div>
       <div class="error-list">
-        <div v-for="e in errorList" :key="e" class="error-item" :class="getSeverity(e.severity)">
+        <div v-for="(e, i) in errorList" :key="i" class="error-item" :class="getSeverity(e.severity)">
           <div class="severity">
             <ui-icon>{{getIconName(e.severity)}}</ui-icon>
           </div>

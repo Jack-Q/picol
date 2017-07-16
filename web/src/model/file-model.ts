@@ -32,7 +32,6 @@ class FileModel {
         f.name === undefined
         || f.savedSrc === undefined
         || f.src === undefined)) {
-        console.log('load local storage');
         this.fileList = store;
       }
       this.current = 0;
@@ -45,7 +44,6 @@ class FileModel {
 
     window.addEventListener('storage', (ev) => {
       if (ev.key === STORAGE_KEY && ev.oldValue !== ev.newValue) {
-        console.log('update');
         if (ev.oldValue === this.getSerializeData()) {
           const newStoreModel = window.localStorage.getItem(STORAGE_KEY);
           const newStore = newStoreModel && JSON.parse(newStoreModel) as IEditingFile[];

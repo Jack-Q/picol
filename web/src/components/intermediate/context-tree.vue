@@ -45,8 +45,8 @@
         </div>
         <div class="nested-context">
           <context-tree 
-            v-for="tree in contextTree.children" 
-            :key="tree"
+            v-for="(tree, i) in contextTree.children" 
+            :key="i"
             :contextTree="tree"/>
         </div>
       </div>

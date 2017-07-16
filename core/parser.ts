@@ -120,10 +120,10 @@ const parseExpressionPostUnary: ParseFunc = (src, expr) => {
 
 // +a, -a, !a, ++a, --a, a++, a--, + + a, arr[a], a(1), (expr)...
 const parseExpressionUnit: ParseFunc = (src) => {
-  const handleUnary = (type: ParseOperatorType, t: Token): ParseNode => {
+  const handleUnary = (type: ParseOperatorType, tk: Token): ParseNode => {
     src.adv();
     const expr = parseExpressionUnit(src);
-    return ParseNode.createExprUnary(type, expr, t);
+    return ParseNode.createExprUnary(type, expr, tk);
   };
 
   const t = src.get();
@@ -140,6 +140,10 @@ const parseExpressionUnit: ParseFunc = (src) => {
     case TokenType.VAL_CHAR:
       src.adv();
       return ParseNode.createExprConstantChar(t.value, t);
+    case TokenType.INV_VALUE:
+      // use integer 0 as default value
+      src.adv();
+      return ParseNode.createExprConstantInt(0, t);
     case TokenType.DIM_L_PAREN:
       src.adv();
       const subExpr = parseExpression(src);
@@ -239,9 +243,15 @@ const parseExpressionWeight =
 
 // expression
 const parseExpression: ParseFunc = (src) => {
+  if (src.get().type === TokenType.DIM_SEMICOLON || isEOF(src)) {
+    src.err.error(ParserError.expect('expression', src.get()));
+    return ParseNode.createPrimitiveType(PrimitiveType.VOID, src.get());
+  }
+
   const expr = parseExpressionUnit(src);
 
   const t = src.get();
+  console.log('expr', t);
   if (isEOF(src)) {
     src.err.throw(ParserError.error('incomplete expression', t));
   }
@@ -403,8 +413,8 @@ const parseStatementReturn: ParseFunc = (src) => {
   const voidExpr = src.get();
   if (voidExpr.type === TokenType.DIM_SEMICOLON) {
     src.adv();
-    const node = new ParseNode(ParseNodeType.STAT_RETURN_VOID, voidExpr);
-    return node;
+    const voidReturnNode = new ParseNode(ParseNodeType.STAT_RETURN_VOID, voidExpr);
+    return voidReturnNode;
   }
   const expr = parseExpression(src);
   const semicolon = src.get();
@@ -448,10 +458,10 @@ const parseStatementIf: ParseFunc = (src) => {
   const elseBegin = src.get();
   if (elseBegin.type !== TokenType.KW_ELSE) {
     // no else clause for this if statement
-    const node = new ParseNode(ParseNodeType.STAT_IF, ifBegin);
-    node.addChild(condition);
-    node.addChild(blockIfTrue);
-    return node;
+    const blockIfNode = new ParseNode(ParseNodeType.STAT_IF, ifBegin);
+    blockIfNode.addChild(condition);
+    blockIfNode.addChild(blockIfTrue);
+    return blockIfNode;
   }
 
   // skip "else"
@@ -746,6 +756,7 @@ const parseFunction: ParseFunc = (src, type, id) => {
 // a, a := 10
 const parseDeclareItem: ParseFunc = (src, id) => {
   const t = src.get();
+  console.log(t);
   if (t.type === TokenType.DIM_COMMA || t.type === TokenType.DIM_SEMICOLON) {
     return ParseNode.createDeclarationItem(id, undefined, id.token);
   }
@@ -779,6 +790,7 @@ const parseDeclareList: ParseFunc = (src, firstId) => {
       id = null;
       declareList.push(item);
     }
+    // console.log(t);
     t = src.get();
     if (t.type !== TokenType.DIM_COMMA && t.type !== TokenType.DIM_SEMICOLON) {
       src.err.error(ParserError.expect(', ;', t));
@@ -939,7 +951,6 @@ export const parser = (tokensWithWhiteSpace: Token[]): IParserResult => {
     adv: (i: number = 1) => tokens[tokenIndex += i],
     err: errList,
   };
-
   // The root/initial is a source file
   let ast: ParseNode | null = null;
   try {
