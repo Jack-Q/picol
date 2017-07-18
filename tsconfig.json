@@ -54,6 +54,7 @@
   },
   "exclude": [
     "node_modules",
-    "./core/cli.ts"
+    "./core/cli.ts",
+    "./core/cli/*"
   ]
 }
