@@ -1,14 +1,16 @@
-import { lexer } from './lexer';
-import { parser } from './parser';
-import { generator } from './quad-gen';
+// Main interface of Picol core library
 
-export { ErrorSeverity, ErrorList, PicolError } from './error';
+import { lexer } from './lib/lexer';
+import { parser } from './lib/parser';
+import { generator } from './lib/quad-gen';
 
-export { Token, TokenType, PrimitiveType, RangePosition } from './token';
-export { ParseNode, ParseNodeType, ParseOperatorType } from './parser-node';
-export { Quadruple, QuadrupleArgType } from './quadruple';
-export { ExecutionContext } from './context';
-export { IExecutionParameterProvider, Executor } from './executor';
-export { buildInFunctions } from './build-in';
+export { ErrorSeverity, ErrorList, PicolError } from './lib/error';
+
+export { Token, TokenType, PrimitiveType, RangePosition } from './lib/token';
+export { ParseNode, ParseNodeType, ParseOperatorType } from './lib/parser-node';
+export { Quadruple, QuadrupleArgType } from './lib/quadruple';
+export { ExecutionContext } from './lib/context';
+export { IExecutionParameterProvider, Executor } from './lib/executor';
+export { buildInFunctions } from './lib/build-in';
 
 export default { lexer, generator, parser };
