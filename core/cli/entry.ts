@@ -1,16 +1,17 @@
+import * as chalk from 'chalk';
 import * as fs from 'fs';
 import Main, { IExecutionParameterProvider, ParseNode, Token, TokenType } from '../main';
 
 const packageConfig = JSON.parse(fs.readFileSync(__dirname + '/../../../package.json').toString());
 
 const banner = [
-  ':::::::::::::::: Picol ::::::::::::::::',
+  chalk.green(':::::::::::::::: Picol ::::::::::::::::'),
   '         \\\\              //  ||        ',
   '           \\\\    ||    //    ||        ',
   '             \\\\  ||  // /``\\ ||        ',
   '        /~====// || \\\\  \\__/ ||        ',
   '        ||  //   <>   \\\\               ',
-  ':::::::::::::::::::::::::::::::/' + packageConfig.version + '/:',
+  chalk.green(':::::::::::::::::::::::::::::::/' + packageConfig.version + '/:'),
 ].join('\n');
 
 const entryPoints = [
@@ -76,7 +77,7 @@ export default (executorName: string, selfName: string, ...arg: string[]) => {
 
   const fileName = process.argv[2];
   if (!fileName) {
-    console.error('a compiling unit is required as parameter');
+    console.error(chalk.red('a compiling unit is required as parameter'));
     process.exit(1);
   }
   const testCode = fs.readFileSync(fileName).toString();

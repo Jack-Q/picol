@@ -22,6 +22,7 @@
     "vue-router": "^2.7.0"
   },
   "devDependencies": {
+    "@types/chalk": "^0.4.31",
     "@types/lodash": "^4.14.69",
     "@types/node": "^8.0.13",
     "autoprefixer": "^7.1.2",
