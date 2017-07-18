@@ -17,6 +17,13 @@ interface IExecutionVal {
   span: number;
 }
 
+export interface IExecutionParameterProvider {
+  getInteger: () => Promise<number>;
+  getFloat: () => Promise<number>;
+  getChar: () => Promise<string>;
+  getBoolean: () => Promise<boolean>;
+}
+
 const HEAP_BASE = 10000;
 
 const arraySet = <T>(arr: T[], ind: number, ele: T): void => {
@@ -36,19 +43,21 @@ export class Executor {
   public temp: number[];
   public program: Quadruple[];
   public console: IConsoleMessage[];
+  public parameterProvider: IExecutionParameterProvider;
 
-  constructor(program?: Quadruple[]) {
+  constructor(provider: IExecutionParameterProvider, program?: Quadruple[]) {
     this.console = [];
+    this.parameterProvider = provider;
     if (program) {
       this.program = program;
     }
     this.reset();
   }
 
-  public step() {
+  public async step() {
     if (this.pc < 0) {
       // build in function invocation
-      this.invokeBuildIn();
+      await this.invokeBuildIn();
     }
     // read quadruple
     const quad = this.program[this.pc - 1];
@@ -217,10 +226,10 @@ export class Executor {
     this.temp = [];
   }
 
-  private pushError(message: string, severity: ErrorSeverity = ErrorSeverity.ERROR) {
+  public pushError(message: string, severity: ErrorSeverity = ErrorSeverity.ERROR) {
     this.console.push({ message, severity });
   }
-  private pushMsg(message: string, severity: ErrorSeverity = ErrorSeverity.INFO) {
+  public pushMsg(message: string, severity: ErrorSeverity = ErrorSeverity.INFO) {
     this.console.push({ message, severity });
   }
   private stackFill(addr: number, val: IExecutionVal) {
@@ -311,7 +320,7 @@ export class Executor {
     return baseAddress;
   }
 
-  private invokeBuildIn() {
+  private async invokeBuildIn() {
     const id = this.pc; // use program counter (negative) for entry point of build in function
     const func = buildInFunctions.find((f) => f.id === this.pc);
     if (!func) {
@@ -324,7 +333,7 @@ export class Executor {
       params.push(this.stack[position]);
       return position + para.type.size;
     }, this.frameBase + 2 * getPrimitiveSize(PrimitiveType.INT) + func.return.size);
-    const result = this.executeBuildIn(func.name, params);
+    const result = await this.executeBuildIn(func.name, params);
 
     // assign return value
     if (!func.return.isVoid) {
@@ -339,19 +348,20 @@ export class Executor {
     this.frameBase = this.stack[this.frameBase];
   }
 
-  private executeBuildIn(name: string, param: any[]) {
-    const buildInImpl: { [name: string]: (...arg: any[]) => any } = {
-      show: (ch: string) => this.pushMsg(ch, ErrorSeverity.INFO),
-      showInt: (int: number) => this.pushMsg(int + '', ErrorSeverity.INFO),
-      getChar: () => {
+  private async executeBuildIn(name: string, param: any[]) {
+    const buildInImpl: { [name: string]: (...arg: any[]) => PromiseLike<any> } = {
+      show: async (ch: string) => this.pushMsg(ch, ErrorSeverity.INFO),
+      showInt: async (int: number) => this.pushMsg(int + '', ErrorSeverity.INFO),
+      getChar: async () => {
         // TODO: async build in function invocation
-        return 't';
+        return await this.parameterProvider.getChar();
       },
-      getInt: () => {
+      getInt: async () => {
         // TODO: async build in function invocation
-        return 1023;
+        console.log('request integer');
+        return await this.parameterProvider.getInteger();
       },
     };
-    return buildInImpl[name](...param);
+    return await buildInImpl[name](...param);
   }
 }

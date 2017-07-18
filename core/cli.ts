@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import Main, { ParseNode, Token, TokenType } from './main';
+import Main, { IExecutionParameterProvider, ParseNode, Token, TokenType } from './main';
 
 const packageConfig = JSON.parse(fs.readFileSync(__dirname + '/../../package.json').toString());
 
@@ -94,3 +94,11 @@ const intermediateContext = Main.generator(ast);
 // intermediateContext.quadrupleList.map((q, i) => console.log(i + '\t', q.toString()));
 
 console.log(printEntryMessage());
+
+// TODO: use `readline-sync` as provider for parameters
+const cliExecutionProvider: IExecutionParameterProvider = {
+  getInteger: () => new Promise((res, rej) => res(1024)),
+  getBoolean: () => new Promise((res, rej) => res(true)),
+  getChar: () => new Promise((res, rej) => res('c')),
+  getFloat: () => new Promise((res, rej) => res(Math.PI)),
+};

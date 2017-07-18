@@ -27,7 +27,7 @@ applications that illustrates the construction of a simple compiler
 
 ## Usage
  
-```
+```bash
 # compile and execute core CLI
 npm run core "src-file.picol"
 

@@ -304,5 +304,4 @@ export class GeneratorContext {
       funcEntry.parameterList = func.parameters;
     });
   }
-
 }
