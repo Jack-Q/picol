@@ -349,18 +349,19 @@ export class Executor {
   }
 
   private async executeBuildIn(name: string, param: any[]) {
+    // implementation of build-in functions
     const buildInImpl: { [name: string]: (...arg: any[]) => PromiseLike<any> } = {
+      // message output functions
       show: async (ch: string) => this.pushMsg(ch, ErrorSeverity.INFO),
       showInt: async (int: number) => this.pushMsg(int + '', ErrorSeverity.INFO),
-      getChar: async () => {
-        // TODO: async build in function invocation
-        return await this.parameterProvider.getChar();
-      },
-      getInt: async () => {
-        // TODO: async build in function invocation
-        console.log('request integer');
-        return await this.parameterProvider.getInteger();
-      },
+      showFloat: async (float: number) => this.pushMsg(float + '', ErrorSeverity.INFO),
+      showBool: async (bool: boolean) => this.pushMsg(bool + '', ErrorSeverity.INFO),
+
+      // message input functions
+      getInt: async () => await this.parameterProvider.getInteger(),
+      getChar: async () => await this.parameterProvider.getChar(),
+      getFloat: async () => await this.parameterProvider.getFloat(),
+      getBoolean: async () => await this.parameterProvider.getBoolean(),
     };
     return await buildInImpl[name](...param);
   }
