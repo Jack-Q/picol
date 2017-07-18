@@ -44,7 +44,6 @@
         <ui-button @click="step">Step</ui-button>
         <ui-button @click="reset">Reset</ui-button>
         <ui-button @click="executor.console = []">Clear Console</ui-button>
-        <ui-button @click="popupParameterRequest = !popupParameterRequest">Toggle Parameter</ui-button>
         <div class="auto-execution-block">
           <ui-switch switchPosition="right" :value="autoExecute" @input="toggleAutoExecute($event)">Auto Execute</ui-switch>
           Speed: <ui-slider ref="slider" icon="play" v-model="speed" :step='10' showMarker snapToSteps :markerValue='calcSpeed'>Speed</ui-slider>
@@ -171,7 +170,9 @@ export default class Execution extends Vue {
       this.executor = new Executor(this.getExecutionParameterProvider(), program);
     }
     if(this.executor.program !== this.program){
+      // after loading an newer version of program, the local state also requires a reset
       this.executor.load(program);
+      this.reset();
     }
     (this.$refs['slider'] as any).refreshSize();
   }
