@@ -36,20 +36,60 @@
 
 \title{Picol Language Specification}
 \author{Jack Q}
+
+% macro for the name of the programming language
+\newcommand{\picol}[0]{{\bfseries Picol}}
+% inline code format
+\newcommand{\ci}[1]{\mintinline[escapeinside=||]{text}{#1}}
+
 \begin{document}
 \maketitle
 
-  \begin{multicols}{2}
+\begin{multicols}{2}
 
   \section{Introduction}
-  {\bfseries Picol} (\emph{Pico-Language}) is a small language for demonstrative purpose. 
-  The name of Picol follows its simple and limited feature.
+    \picol{} (\emph{Pico-Language}) is a small language for demonstrative purpose. 
+    The name of \picol{} follows its simple and limited features.
 
+    \picol{} supports basic arithmetic operations, relational operations and logical operations 
+    on four primitive data types: integer (\ci{int}), float point number (\ci{float}), 
+    character (\ci{char}) and boolean value (\ci{bool}). Arrays in \picol are collection of primitive values, 
+    which in \picol{} can be either single-dimensional or multi-dimensional and the size of each 
+    dimension can be specified at execution time. \picol also supports functions for code reuse and 
+    organization, which can be nested within each other and invocated in a recursive manner.
+    
+    As an simple language, \picol{} has no support for multi-file organization of source code, 
+    all code are stores in an single plain text file; \picol provides no facilities 
+    for importing functionalities from other languages, yet a limited number of build-in functions 
+    provides fundamental input/output capabilities and mathematical functions for this language.
+
+    This document provides an rough description of features and details of languages,
+    including its data types, syntax, execution model, build-in functions, 
+    virtual runtime environment and implementation notes.
+
+  \section{Data Types}
+    \picol{} supports four primitive data types, which are integer (\ci{int}), float point number (\ci{float}), 
+    character (\ci{char}) and boolean value (\ci{bool}). It also supports two derived data types,
+    which are array type of primitive data type and reference type to array of primitive data type.
+    Besides, a special \ci{void} type can be treated as a primitive data type in certain conditions.
+
+    \subsection{Primitive Data Types}
+      \subsubsection{integer (\ci{int})}
+      \subsubsection{float point number (\ci{float})}
+      \subsubsection{character (\ci{char})}
+      \subsubsection{boolean (\ci{bool})}
+
+    \subsection{Derived Data Types}
+      \subsubsection{array}
+      \subsubsection{reference to array}
+
+    \subsection{Other Data Types}
+      \subsubsection{\ci{void}}
   \section{Syntax}
 
-  \subsection{Overview}
+    \subsection{Overview}
 
-  Keywords: the following words are preserved for use by language.
+    Keywords: the following words are preserved for use by language.
    
     \begin{center}
       \begin{tcolorbox}[breakable, blanker, width=0.8\linewidth]
@@ -60,67 +100,67 @@
       \end{tcolorbox}
     \end{center}
 
-\begin{grammar}
-  <statement> ::= `(' <statement> `)'
-             \alt <function>
-             \alt `return' <expression>
-\end{grammar}
-\begin{grammar}
- <statement> ::= `(' <statement> `)'
-             \alt <function>
-             \alt `return' <expression>
-\end{grammar}
+    \begin{grammar}
+      <statement> ::= `(' <statement> `)'
+                \alt <function>
+                \alt `return' <expression>
+    \end{grammar}
+    \begin{grammar}
+    <statement> ::= `(' <statement> `)'
+                \alt <function>
+                \alt `return' <expression>
+    \end{grammar}
 
-\end{multicols}
+    \end{multicols}
 
-\begin{center}
-    % This sections contains the language expressed as a specific BNF syntax
-    % The ``rail'' environment will abstract the content 
-    % This process can be finished via the shell script helper in this folder
+    \begin{center}
+        % This sections contains the language expressed as a specific BNF syntax
+        % The ``rail'' environment will abstract the content 
+        % This process can be finished via the shell script helper in this folder
+        \begin{rail}
+          Statement : '\{' StatementSequence '\}'
+                    | FunctionDeclaration
+                    | 'return' Expression ';'
+                    | Expression ';'
+                    | Declaration ';'
+                    | 'if' '(' Expression ')' Statement
+                    | 'if' '(' Expression ')' Statement 'else' Statement
+                    | 'break' ';'
+                    | 'continue' ';'
+                    | 'switch' '(' Expression ')' '\{' OptionList '\}'
+                    | 'do' Statement 'while' '(' Expression ')' ';'
+                    | 'while' '(' Expression ')' Statement
+                    ;      
+        \end{rail}
+    \end{center}
+      
+    \begin{multicols}{2}
+
     \begin{rail}
-      Statement : '\{' StatementSequence '\}'
-                | FunctionDeclaration
-                | 'return' Expression ';'
-                | Expression ';'
-                | Declaration ';'
-                | 'if' '(' Expression ')' Statement
-                | 'if' '(' Expression ')' Statement 'else' Statement
-                | 'break' ';'
-                | 'continue' ';'
-                | 'switch' '(' Expression ')' '\{' OptionList '\}'
-                | 'do' Statement 'while' '(' Expression ')' ';'
-                | 'while' '(' Expression ')' Statement
-                ;      
+      StatementSequence : Statement StatementSequence | ();
+
+      FunctionDeclaration : Type Identifier '(' ParameterList ')' \\
+                          '\{' StatementSequence '\}';
+      
+      Declaration : PrimitiveType DeclareList | ArrayType Identifier;
+
+      DeclareList : DeclareItem | DeclareItem ',' DeclareList;
+
+      DeclareItem : Identifier | Identifier ':=' Expression;
+
+      ParameterList : () | Type Identifier | Type Identifier ',' ParameterList ;
+      Type: PrimitiveType | ArrayType;
+      ArrayType : Type '[' ArrayDimension ']';
+      ArrayDimension : IntegerLiteral | IntegerLiteral ',' ArrayDimension;
+      PrimitiveType : 'int' | 'float' | 'char' | 'bool';
+
+      OptionList : 'case' Expression ':' \\
+                    Statement OptionList
+                | 'default' ':' Statement
+                | ()
+                ;
     \end{rail}
-\end{center}
-  
-\begin{multicols}{2}
-
-  \begin{rail}
-    StatementSequence : Statement StatementSequence | ();
-
-    FunctionDeclaration : Type Identifier '(' ParameterList ')' \\
-                        '\{' StatementSequence '\}';
     
-    Declaration : PrimitiveType DeclareList | ArrayType Identifier;
-
-    DeclareList : DeclareItem | DeclareItem ',' DeclareList;
-
-    DeclareItem : Identifier | Identifier ':=' Expression;
-
-    ParameterList : () | Type Identifier | Type Identifier ',' ParameterList ;
-    Type: PrimitiveType | ArrayType;
-    ArrayType : Type '[' ArrayDimension ']';
-    ArrayDimension : IntegerLiteral | IntegerLiteral ',' ArrayDimension;
-    PrimitiveType : 'int' | 'float' | 'char' | 'bool';
-
-    OptionList : 'case' Expression ':' \\
-                  Statement OptionList
-              | 'default' ':' Statement
-              | ()
-              ;
-  \end{rail}
-  
   
     \begin{rail}      
       Expression : LeftValue AssignOperator Expression
@@ -162,6 +202,16 @@
       DigitNonZero : '1 $\ldots$ 9';
     \end{rail}
 
-  \end{multicols}
+  \section{Execution Model}
+
+  \section{Build-in Functions}
+
+  \section{Virtual Runtime Environment}
+
+  \section{Implementation Notes}
+
+  \section{Summary}
+
+\end{multicols}
 
 \end{document}

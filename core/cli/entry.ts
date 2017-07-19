@@ -71,11 +71,11 @@ const printToken = (tokenIterator: Iterable<Token>): void => {
   }
 };
 
-export default (executorName: string, selfName: string, ...arg: string[]) => {
+export default (...argv: string[]) => {
   console.log(banner);
   console.log(printEntryMessage());
 
-  const fileName = process.argv[2];
+  const fileName = argv[2];
   if (!fileName) {
     console.error(chalk.red('a compiling unit is required as parameter'));
     process.exit(1);
