@@ -25,6 +25,7 @@
         <div v-if="isEmpty(contextTree.nameTable)" class="variable-list" :class="{hide: hideVariable}">
           <div v-for="(n,i) in contextTree.nameTable" class="variable" :key="i">
             <pre class="name">{{i}}</pre>
+            <pre v-if="i && i[0] === '?'" class="gen">Generated</pre>
             <span v-if="n.typeString == 'PRIMITIVE'" class="variable-type primitive">
               <pre>{{n.info.toString()}}</pre> {{n.info.size}} {{n.info.size > 1 ? 'bytes' : 'byte'}}
               <div class="stack-offset">{{n.stackOffset}}</div>
@@ -76,14 +77,14 @@ import { Quadruple, ExecutionContext } from '../../../../core/main';
 })
 export default class ContextTree extends Vue {
   @Prop contextTree = p({ type: Object })
-  @Prop isRoot = p({type: Boolean})
+  @Prop isRoot = p({ type: Boolean })
   hideVariable = false;
   open = true;
   isEmpty(object: Object): boolean {
     return Object.keys(object).filter(k => k !== '__ob__').length > 0;
   }
   saveContext(): void {
-    if(!this.contextTree){
+    if (!this.contextTree) {
       return;
     }
     const content = (this.contextTree as ExecutionContext).dump(2);
@@ -136,7 +137,7 @@ export default class ContextTree extends Vue {
   text-align: center;
   line-height: 45px;
   position: relative;
-  background: #eee;
+  background: rgba(255, 255, 255, 0);
   transition: all ease 400ms;
   cursor: pointer;
   z-index: 10;
@@ -146,7 +147,7 @@ export default class ContextTree extends Vue {
   background: #ccc;
 }
 
-.context-title-action i{
+.context-title-action i {
   line-height: 45px;
 }
 
@@ -175,12 +176,12 @@ export default class ContextTree extends Vue {
   max-height: 45px;
 }
 
-.variable-list.hide > div {
+.variable-list.hide>div {
   opacity: 0.3;
   filter: blur(2px);
 }
 
-.variable-list.hide::after{
+.variable-list.hide::after {
   opacity: 1;
   z-index: 1;
 }
@@ -219,6 +220,12 @@ pre {
 
 pre.name {
   background: #fed;
+}
+
+pre.gen {
+  background: #cfd;
+  border-radius: 2px;
+  font-size: 0.8em;
 }
 
 .context-body {
@@ -265,6 +272,4 @@ pre.name {
   color: #ccc;
   height: 100%;
 }
-
-
 </style>
