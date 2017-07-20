@@ -6,7 +6,7 @@ import {
   QuadrupleArgTableRef, QuadrupleArgType, QuadrupleArgValue, QuadrupleArgVarTemp, QuadrupleOperator,
 } from './quadruple';
 import {
-   createValueType, getPrimitiveSize, SymbolEntryInfo, SymbolEntryType, ValueType, ValueTypeInfo,
+createValueType, getPrimitiveSize, SymbolEntryInfo, SymbolEntryType, ValueType, ValueTypeInfo,
 } from './symbol-entry';
 import { PrimitiveType } from './token';
 
@@ -43,9 +43,9 @@ class AttrExpr implements IAttr {
     return new AttrExpr(quadValue, createValueType.prim(type));
   }
 
-  public static newQuadrupleRef(value: QuadrupleArg, type: SymbolEntryInfo): AttrExpr {
+  public static newQuadrupleRef(value: QuadrupleArg, type: ValueTypeInfo): AttrExpr {
     // simple wrapper for the original value
-    return new AttrExpr(value);
+    return new AttrExpr(value, type);
   }
 
   public isValid = true;
@@ -53,10 +53,13 @@ class AttrExpr implements IAttr {
   public generatedValue: QuadrupleArg | undefined;
   public trueChain = 0;
   public falseChain = 0;
-  public entryType: SymbolEntryInfo;
+  public entryType: ValueTypeInfo;
 
   private constructor(value?: QuadrupleArg, type?: ValueTypeInfo) {
     this.generatedValue = value;
+    if (type) {
+      this.entryType = type;
+    }
   }
 
   private get value(): QuadrupleArg {
@@ -158,6 +161,10 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   // Unary posit operation
   if (node.value === ParseOperatorType.UNI_POSIT) {
     // TODO: value type conversion when processing the unary posit operator
+    if (operand.entryType.primitiveType === PrimitiveType.BOOL) {
+      ctx.err.info(new GeneratorError('implicit conversion from bool to int', node.token));
+      return AttrExpr.newQuadrupleRef(opVal, new ValueTypeInfo(PrimitiveType.INT));
+    }
     return AttrExpr.newQuadrupleRef(opVal, operand.entryType);
   }
 
@@ -280,7 +287,19 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
 };
 
 const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
-  const func = generateExpression(ctx, node.children[0]).toValue(ctx);
+  const funcNameNode = node.children[0];
+  const funcNameStatus = ctx.checkName(funcNameNode.value);
+  if (!funcNameStatus.isDefined) {
+    ctx.err.error(new GeneratorError('function "' + funcNameNode.value + '" is not defined', funcNameNode.token));
+    ctx.err.warn(new GeneratorError('function result is assumed as an temporary variable', funcNameNode.token));
+    // undefined variable, assumed as an integer
+    return AttrExpr.newQuadrupleRef(ctx.getTempVar(), createValueType.prim(PrimitiveType.INT));
+  }
+  if (funcNameStatus.entry && funcNameStatus.entry.type !== SymbolEntryType.FUNCTION) {
+    ctx.err.error(new GeneratorError('variable identifier ' + funcNameNode.value + ' cannot be used as function',
+      funcNameNode.token));
+    return AttrExpr.newQuadrupleRef(ctx.getEntry(funcNameNode.value), funcNameStatus.entry.info as ValueTypeInfo);
+  }
   const funcInfo = ctx.getEntryInfo(node.children[0].value).asFunc;
   const argList = node.children[1].children;
 
@@ -316,7 +335,7 @@ const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
   });
 
   const funcFrameBaseArg = new QuadrupleArgValue(PrimitiveType.INT, funcFrameBase);
-  ctx.addQuadruple(QuadrupleOperator.F_FUNC, funcFrameBaseArg, Q_NULL, func);
+  ctx.addQuadruple(QuadrupleOperator.F_FUNC, funcFrameBaseArg, Q_NULL, ctx.getEntry(funcNameNode.value));
 
   // no return value
   if (funcInfo.returnType.isVoid) {
@@ -398,12 +417,18 @@ const generateExpression: generateRule<AttrExpr> = (ctx, node) => {
       if (!nameStatue.isDefined) {
         ctx.err.error(new GeneratorError('variable "' + node.value + '" is not defined', node.token));
         ctx.err.warn(new GeneratorError('variable is assumed as an temporary variable', node.token));
-        console.log(node);
         // undefined variable, assumed as an integer
         return AttrExpr.newQuadrupleRef(ctx.getTempVar(), createValueType.prim(PrimitiveType.INT));
+      } else {
+        // the type of the entry is the same as the table entry
+        const symbolEntry = ctx.getEntryInfo(node.value);
+        if (symbolEntry.type === SymbolEntryType.FUNCTION) {
+          ctx.err.error(new GeneratorError('cannot use function identifier as variable', node.token));
+          // use return type for function
+          return AttrExpr.newQuadrupleRef(ctx.getEntry(node.value), symbolEntry.asFunc.returnType);
+        }
+        return AttrExpr.newQuadrupleRef(ctx.getEntry(node.value), symbolEntry.info as ValueTypeInfo);
       }
-      // the type of the entry is the same as the table entry
-      return AttrExpr.newQuadrupleRef(ctx.getEntry(node.value), ctx.getEntryInfo(node.value).info);
     }
     case ParseNodeType.VAL_UNINITIALIZED:
     default:
