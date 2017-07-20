@@ -7,6 +7,9 @@
       <div class="filter">
         <div :class="{on: filter === ''}" @click="filter=''">ALL</div>
         <div :class="{on: filter === 'no-space'}" @click="filter='no-space'">No Space</div>
+        <div class="filter-button" @click="dumpTokenList">
+          <i class="material-icons">save</i>
+        </div>
       </div>
       <div class="token-list">
         <div v-for="(t, i) in getFilteredList()" :key="i" class="token-item">
@@ -64,6 +67,18 @@ export default class TokenList extends Vue {
 
   getType(t: TokenType) {
     return TokenType[t];
+  }
+
+  dumpTokenList() {
+    const tokenList = (this.tokenList || []) as Token[];
+    const content = tokenList.map((token, i) => 
+      `${i}\t${TokenType[token.type]}\t${JSON.stringify(token.literal)}\t${token.value || ''}`).join('\n');
+    const helperElement = document.createElement('a');
+    helperElement.download = 'token-list.txt';
+    helperElement.href = window.URL.createObjectURL(new Blob([content], {
+      type: 'octet/stream',
+    }));
+    helperElement.click();
   }
 }
 </script>
@@ -184,5 +199,10 @@ export default class TokenList extends Vue {
   .pos-line::before {
     content: 'LN';
     cursor: pointer;
+  }
+  .filter > .filter-button {
+    flex: 0;
+    min-width: 45px;
+    text-align: center;
   }
 </style>
