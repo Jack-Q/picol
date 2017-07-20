@@ -40,6 +40,9 @@
       </div>
       <div class="main-stack">
         <ui-tabs type="icon" fullwidth>
+          <ui-tab icon="playlist_play">
+            <execution :program="quadrupleTable" />
+          </ui-tab>
           <ui-tab icon="code">
             <div class="src-editor">
               <monaco-editor
@@ -62,9 +65,6 @@
           </ui-tab>
           <ui-tab icon="list">
             <intermediate :quadList="quadrupleTable" :contextTree="contextTree" />
-          </ui-tab>
-          <ui-tab icon="playlist_play">
-            <execution :program="quadrupleTable" />
           </ui-tab>
         </ui-tabs>
       </div>

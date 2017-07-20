@@ -19,7 +19,7 @@
       <ui-icon>view_comfy</ui-icon>
       <pre>{{ast.children[0].value}}</pre>
     </div>
-    <div v-for="(arg, i) in ast.children[1].children" class="node-block expr-inline-node">
+    <div v-for="(arg, i) in ast.children[1].children" class="node-block expr-inline-node" :key="i">
       <div class="expr-node-header"><div class="type-icon">dim {{i}}</div></div>
       <ast-expr :ast="arg" />
     </div>
@@ -29,7 +29,7 @@
       <ui-icon>call</ui-icon>
       <pre>{{ast.children[0].value}}</pre>
     </div>
-    <div v-for="(arg, i) in ast.children[1].children" class="node-block expr-inline-node">
+    <div v-for="(arg, i) in ast.children[1].children" class="node-block expr-inline-node" :key="i">
       <div class="expr-node-header"><div class="type-icon">arg {{i}}</div></div>
       <ast-expr :ast="arg" />
     </div>

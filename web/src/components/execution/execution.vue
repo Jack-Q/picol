@@ -1,27 +1,7 @@
 <template>
   <div class="executor-root" v-if="program">
-    <div v-if="popupParameterRequest" class="parameter-dialog-root">
-      <div class="model-wrapper">
-        <template v-if="requestedValueType == 'getInt'">
-          <div class="model-header">Please provide an Integer</div>
-          <div>
-            <ui-textbox label="integer value" placeholder="Enter integer name" v-model="integerValue"></ui-textbox>
-          </div>
-          <ui-button @click="resolvePopup(1024, requestedValueIntegerResolver), requestedValueIntegerResolver = undefined">OK</ui-button>
-        </template>
-        <div v-else-if="requestedValueType == 'getFloat'">
-          Get Float 
-        </div>
-        <div v-else-if="requestedValueType == 'getChar'">
-
-        </div>
-        <div v-else-if="requestedValueType == 'getBoolean'">
-
-        </div>
-        <div>
-          <ui-button @click="reset">Cancel &amp; Reset</ui-button>
-        </div>
-      </div>
+    <div :class="{on: popupParameterRequest}" class="parameter-dialog-root">
+      <ValueResolverDialog ref="resolver" @reset="reset" @submitValue="resolvePopup" :valueType="requestedValueType" />
     </div>
     <div class="col statue-col">
       <div class="section">status</div>
@@ -46,7 +26,8 @@
         <ui-button @click="executor.console = []">Clear Console</ui-button>
         <div class="auto-execution-block">
           <ui-switch switchPosition="right" :value="autoExecute" @input="toggleAutoExecute($event)">Auto Execute</ui-switch>
-          Speed: <ui-slider ref="slider" icon="play" v-model="speed" :step='10' showMarker snapToSteps :markerValue='calcSpeed'>Speed</ui-slider>
+          Speed:
+          <ui-slider ref="slider" icon="play" v-model="speed" :step='10' showMarker snapToSteps :markerValue='calcSpeed'>Speed</ui-slider>
         </div>
       </div>
       <div class="section">console</div>
@@ -77,8 +58,7 @@
             <div class="message">{{err.message}}</div>
           </div>
           <div v-else>
-            {{getSeverity(err.severity)}}
-            {{err.severity}}
+            {{getSeverity(err.severity)}} {{err.severity}}
             <div class="message">{{err.message}}</div>
           </div>
         </template>
@@ -112,50 +92,57 @@ import { Quadruple, Executor, ErrorSeverity, buildInFunctions, IExecutionParamet
 
 import QuadViewer from '../intermediate/quad-viewer';
 import MemoryView from './memory-view';
+import ValueResolverDialog from './value-resolver-dialog';
+
+type ValueResolver<T> = (val: T | PromiseLike<T>) => void;
+type RequestedValueResolver = ValueResolver<boolean> | ValueResolver<string> | ValueResolver<number>;
 
 @Component({
   name: 'execution',
   components: {
     QuadViewer,
     MemoryView,
+    ValueResolverDialog,
   },
 })
 export default class Execution extends Vue {
-  @Prop program = p({type: Array})
+  @Prop program = p({ type: Array })
 
   autoExecute: boolean = false;
   speed: number = 0;
+
   popupParameterRequest: boolean = false;
   requestedValueType: string = ""; // getInt, getChar, getFloat, getBool
-  
-  requestedValueBooleanResolver?: (val: boolean | PromiseLike<boolean>) => void = undefined;
-  requestedValueCharResolver?: (val: string | PromiseLike<string>) => void = undefined;
-  requestedValueIntegerResolver?: (val: number | PromiseLike<number>) => void = undefined;
-  requestedValueFloatResolver?: (val: number | PromiseLike<number>) => void = undefined;
+  requestedValueResolver?: RequestedValueResolver = undefined;
 
-  get calcSpeed () {
+  get calcSpeed() {
     return (Math.round((100 - this.speed) / 10) || 1) / 10;
   }
 
   getExecutionParameterProvider(): IExecutionParameterProvider {
-    const showPopup = (type: string): void => {
+    const showPopup = (resolver: RequestedValueResolver, type: string): void => {
+      console.log(this.$refs);
+      (this.$refs['resolver'] as ValueResolverDialog).resetValue();
+      this.requestedValueResolver = resolver;
       this.requestedValueType = type;
       this.popupParameterRequest = true;
     }
     return {
-      getBoolean: () => new Promise((res, rej) => {this.requestedValueBooleanResolver = res; showPopup('getBoolean'); }),
-      getChar: () => new Promise((res, rej) => {this.requestedValueCharResolver = res; showPopup('getChar'); }),
-      getInteger: () => new Promise((res, rej) => {this.requestedValueIntegerResolver = res; showPopup('getInt'); }),
-      getFloat: () => new Promise((res, rej) => {this.requestedValueFloatResolver = res; showPopup('getFloat'); }),
+      getBoolean: () => new Promise((res, rej) => showPopup(res, 'getBoolean')),
+      getChar: () => new Promise((res, rej) => showPopup(res, 'getChar')),
+      getInteger: () => new Promise((res, rej) => showPopup(res, 'getInt')),
+      getFloat: () => new Promise((res, rej) => showPopup(res, 'getFloat')),
     };
   }
 
-  resolvePopup<T>(val: T, resolver?: (val: T | PromiseLike<T>) => void){
-    if(!resolver){
+  resolvePopup<T extends number | string | boolean>(val: T) {
+    if (!this.requestedValueResolver) {
       this.executor.pushError("fatal error: no resolver to handle message");
       this.reset();
       return;
     }
+
+    const resolver = this.requestedValueResolver as ValueResolver<T>;
     this.requestedValueType = "";
     this.popupParameterRequest = false;
     resolver(val);
@@ -164,12 +151,12 @@ export default class Execution extends Vue {
   executor: Executor = new Executor(this.getExecutionParameterProvider());
   autoExecuteHandle = 0;
 
-  @Lifecycle beforeUpdate(){
+  @Lifecycle beforeUpdate() {
     const program = this.program as Quadruple[];
-    if(!this.executor){
+    if (!this.executor) {
       this.executor = new Executor(this.getExecutionParameterProvider(), program);
     }
-    if(this.executor.program !== this.program){
+    if (this.executor.program !== this.program) {
       // after loading an newer version of program, the local state also requires a reset
       this.executor.load(program);
       this.reset();
@@ -177,22 +164,22 @@ export default class Execution extends Vue {
     (this.$refs['slider'] as any).refreshSize();
   }
 
-  toggleAutoExecute(autoExecute: boolean){
-    if(this.autoExecute === autoExecute){
+  toggleAutoExecute(autoExecute: boolean) {
+    if (this.autoExecute === autoExecute) {
       return;
     }
     this.autoExecute = autoExecute;
-    if(autoExecute){
+    if (autoExecute) {
       this.autoExecuteCallback();
-    }else{
+    } else {
       clearTimeout(this.autoExecuteHandle);
       this.autoExecuteHandle = 0;
     }
   }
 
-  autoExecuteCallback(){
-    return this.executor.step().then(()=>{
-      this.autoExecuteHandle = 
+  autoExecuteCallback() {
+    return this.executor.step().then(() => {
+      this.autoExecuteHandle =
         setTimeout(() => this.autoExecuteCallback(), 1000 * this.calcSpeed);
     });
   }
@@ -203,14 +190,14 @@ export default class Execution extends Vue {
   }
 
   reset() {
-    if(this.popupParameterRequest){
+    if (this.popupParameterRequest) {
       this.popupParameterRequest = false;
     }
     this.toggleAutoExecute(false);
     this.executor.reset();
   }
 
-  getSeverity(severity: ErrorSeverity): string{
+  getSeverity(severity: ErrorSeverity): string {
     return ErrorSeverity[severity];
   }
 
@@ -221,105 +208,126 @@ export default class Execution extends Vue {
 </script>
 
 <style scoped>
-  .executor-root{
-    flex: 1;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-  pre{
-    overflow-x: auto;
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    font-size: 12px;
-    overflow: auto;
-  }
-  .col {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  .auto-execution-block{
-    display: block;
-    width: 100%;
-    position: relative;
-  }
-  .control {
-    text-align: center;
-    padding: 5px 20px;
-  }
-  .console{
-    overflow-y: auto;
-    font-size: 0.9em;
-    line-height: 25px;
-  }
-  .program{
-    min-width: 280px;
-    flex: 1;
-    position: relative;
-  }
+.executor-root {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 
-  .program > div {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-  }
+pre {
+  overflow-x: auto;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  font-size: 12px;
+  overflow: auto;
+}
 
-  .section {
-    text-align: center;
-    background: #eee;
-    height: 45px;
-    line-height: 45px;
-    font-weight: 500;
-    text-transform: uppercase;
-  }
+.col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
-  dl{
-    text-align: center;
-    margin: 0;
-    padding: 0;
-  }
+.auto-execution-block {
+  display: block;
+  width: 100%;
+  position: relative;
+}
 
-  dt{
-    margin: 0 0 4px 0;
-    float: left;
-    clear: left;
-    width: 35%;
-  }
+.control {
+  text-align: center;
+  padding: 5px 20px;
+}
 
-  dd{
-    float: left;
-    width: 64%;
-    margin: 0 0 4px 1%;
-  }
-  .info {
-    display: flex;
-    width: 100%;
-  }
-  .icon{
-    text-align: center;
-    min-width: 60px;
-    flex: 0;
-  }
-  .message{
-    text-align: left;
-    flex: 1;
-    border-left: solid #ccc 1px;
-  }
-  .build-in-tip{
-    font-size: 0.65em;
-    padding: 2px 4px;
-    background: #ccc;
-    border-radius: 3px;
-  }
-  .parameter-dialog-root {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    background: rgba(120,120,120,0.6);
-    z-index: 10;
-    display: flex;
-  }
+.console {
+  overflow-y: auto;
+  font-size: 0.9em;
+  line-height: 25px;
+}
+
+.program {
+  min-width: 280px;
+  flex: 1;
+  position: relative;
+}
+
+.program>div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.section {
+  text-align: center;
+  background: #eee;
+  height: 45px;
+  line-height: 45px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+dl {
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+dt {
+  margin: 0 0 4px 0;
+  float: left;
+  clear: left;
+  width: 35%;
+}
+
+dd {
+  float: left;
+  width: 64%;
+  margin: 0 0 4px 1%;
+}
+
+.info {
+  display: flex;
+  width: 100%;
+}
+
+.icon {
+  text-align: center;
+  min-width: 60px;
+  flex: 0;
+}
+
+.message {
+  text-align: left;
+  flex: 1;
+  border-left: solid #ccc 1px;
+}
+
+.build-in-tip {
+  font-size: 0.65em;
+  padding: 2px 4px;
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.parameter-dialog-root {
+  position: absolute;
+  opacity: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(120, 120, 120, 0.6);
+  z-index: 10;
+  display: flex;
+  max-height: 0;
+  overflow: hidden;
+  display: flex;
+  transition: all ease 400ms;
+}
+
+.parameter-dialog-root.on {
+  opacity: 1;
+  max-height: 3000px;
+}
 </style>
