@@ -8,7 +8,7 @@ import {
 import {
 createValueType, getPrimitiveSize, SymbolEntryInfo, SymbolEntryType, ValueType, ValueTypeInfo,
 } from './symbol-entry';
-import { PrimitiveType } from './token';
+import { PrimitiveType, Token } from './token';
 
 const ARRAY_ADDR_OFFSET = 0;
 const ARRAY_DIM_DEF_OFFSET = ARRAY_ADDR_OFFSET + getPrimitiveSize('ref');
@@ -114,7 +114,7 @@ class AttrExpr implements IAttr {
     return this.value;
   }
 
-  public toRef(ctx: GeneratorContext): QuadrupleArg {
+  public toRef(ctx: GeneratorContext, token?: Token): QuadrupleArg {
     if (this.isBoolean) {
       throw new GeneratorError('boolean cannot be used as reference value', undefined);
     }
@@ -126,7 +126,7 @@ class AttrExpr implements IAttr {
       case QuadrupleArgType.NULL: // null value cannot be written
       case QuadrupleArgType.VALUE_INST: // instance value cannot be written
       default:
-        throw new GeneratorError('value cannot be used as reference', undefined);
+        throw new GeneratorError('value cannot be used as reference', token);
     }
   }
 }
@@ -137,8 +137,8 @@ const attr = {
 
 type generateRule<T extends IAttr> = (ctx: GeneratorContext, node: ParseNode, newContext?: boolean) => T;
 
-const assign = (ctx: GeneratorContext, val: QuadrupleArg, target: AttrExpr) => {
-  const ref = target.toRef(ctx);
+const assign = (ctx: GeneratorContext, val: QuadrupleArg, target: AttrExpr, token?: Token) => {
+  const ref = target.toRef(ctx, token);
   if (ref.type === QuadrupleArgType.TABLE_REF) {
     // Value assignment
     ctx.addQuadruple(QuadrupleOperator.V_ASS, val, Q_NULL, ref);
@@ -160,7 +160,10 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
 
   // Unary posit operation
   if (node.value === ParseOperatorType.UNI_POSIT) {
-    // TODO: value type conversion when processing the unary posit operator
+    if (operand.entryType.type !== ValueType.PRIMITIVE) {
+      ctx.err.error(new GeneratorError('posit operator can only be applied to primitive type', node.token));
+      return AttrExpr.newQuadrupleRef(opVal, new ValueTypeInfo(PrimitiveType.INT));
+    }
     if (operand.entryType.primitiveType === PrimitiveType.BOOL) {
       ctx.err.info(new GeneratorError('implicit conversion from bool to int', node.token));
       return AttrExpr.newQuadrupleRef(opVal, new ValueTypeInfo(PrimitiveType.INT));
@@ -170,9 +173,20 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
 
   // Unary negate operation
   if (node.value === ParseOperatorType.UNI_NEGATE) {
-    // TODO: type check
+    if (operand.entryType.type !== ValueType.PRIMITIVE) {
+      ctx.err.error(new GeneratorError('negate operator can only be applied to primitive type', node.token));
+      return AttrExpr.newQuadrupleRef(opVal, new ValueTypeInfo(PrimitiveType.INT));
+    }
+    if (operand.entryType.primitiveType === PrimitiveType.BOOL) {
+      ctx.err.error(new GeneratorError('negate operator cannot be applied to bool', node.token));
+      return AttrExpr.newQuadrupleRef(opVal, new ValueTypeInfo(PrimitiveType.INT));
+    }
     const invTemp = ctx.getTempVar();
-    ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), opVal, invTemp);
+    if (operand.entryType.primitiveType === PrimitiveType.FLOAT) {
+      ctx.addQuadruple(QuadrupleOperator.R_SUB, new QuadrupleArgValue(PrimitiveType.FLOAT, 0), opVal, invTemp);
+    } else {
+      ctx.addQuadruple(QuadrupleOperator.I_SUB, new QuadrupleArgValue(PrimitiveType.INT, 0), opVal, invTemp);
+    }
     return AttrExpr.newQuadrupleRef(invTemp, operand.entryType);
   }
 
@@ -185,26 +199,30 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   // following operations are all requires to be performed on numbers
   // and the type of the result is the same as the parameter (float, char, int)
   // bool will cause compiling error
+  if (operand.entryType.primitiveType === PrimitiveType.BOOL) {
+    ctx.err.error(new GeneratorError('self-increment/decrement operator cannot be applied to bool', node.token));
+    return AttrExpr.newQuadrupleRef(opVal, operand.entryType);
+  }
   switch (node.value) {
     case ParseOperatorType.UNI_INC_PRE:
       ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ONE, temp);
-      assign(ctx, temp, operand);
+      assign(ctx, temp, operand, node.children[0].token);
       break;
     case ParseOperatorType.UNI_INC_POS:
       ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO, temp);
       temp2 = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.I_ADD, temp, Q_ONE, temp2);
-      assign(ctx, temp2, operand);
+      assign(ctx, temp2, operand, node.children[0].token);
       break;
     case ParseOperatorType.UNI_DEC_PRE:
       ctx.addQuadruple(QuadrupleOperator.I_SUB, opVal, Q_ONE, temp);
-      assign(ctx, temp, operand);
+      assign(ctx, temp, operand, node.children[0].token);
       break;
     case ParseOperatorType.UNI_DEC_POS:
       ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO, temp);
       temp2 = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.I_SUB, temp, Q_ONE, temp2);
-      assign(ctx, temp2, operand);
+      assign(ctx, temp2, operand, node.children[0].token);
       break;
     default:
       ctx.err.error(new GeneratorError('unknown unary operator', node.token));
@@ -249,8 +267,8 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
     // TODO: check the compatibility of the value to be assigned
 
     const temp = ctx.getTempVar();
-    ctx.addQuadruple(assOp, lOp.toRef(ctx), rOp.toValue(ctx), temp);
-    assign(ctx, temp, lOp);
+    ctx.addQuadruple(assOp, lOp.toRef(ctx, node.children[0].token), rOp.toValue(ctx), temp);
+    assign(ctx, temp, lOp, node.children[0].token);
 
     // the type of the result is the same as the value stored in the
     // variable, thus the type is determined by lOp
@@ -273,8 +291,8 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
     case ParseOperatorType.BIN_ASS_MUL: return genAssOperator(QuadrupleOperator.I_MUL);
     case ParseOperatorType.BIN_ASS_DIV: return genAssOperator(QuadrupleOperator.I_DIV);
     case ParseOperatorType.BIN_ASS_VAL:
-      assign(ctx, rOp.toValue(ctx), lOp);
-      return AttrExpr.newQuadrupleRef(lOp.toRef(ctx), lOp.entryType);
+      assign(ctx, rOp.toValue(ctx), lOp, node.children[0].token);
+      return AttrExpr.newQuadrupleRef(lOp.toRef(ctx, node.children[0].token), lOp.entryType);
     case ParseOperatorType.BIN_REL_EQ: return genRelOperator(QuadrupleOperator.J_EQ);
     case ParseOperatorType.BIN_REL_GT: return genRelOperator(QuadrupleOperator.J_GT);
     case ParseOperatorType.BIN_REL_GTE: return genRelOperator(QuadrupleOperator.J_GTE);
