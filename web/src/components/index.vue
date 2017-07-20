@@ -39,10 +39,19 @@
         <ui-tabs type="icon" fullwidth>
           <ui-tab icon="code">
             <div class="src-editor">
-              <monaco-editor :code="code" :options="editorOptions" srcPath='./' width='100%' height='100%' theme='PicolTheme' @saveContent="" @mounted="editorMounted($event)" @codeChange="editorCodeChange" language='Picol'>
+              <monaco-editor :code="code" :options="editorOptions" srcPath='./' width='100%' height='100%' theme='PicolTheme' @mounted="editorMounted($event)" @codeChange="editorCodeChange" language='Picol'>
               </monaco-editor>
             </div>
-            <ErrorList :errorList="errorList" @selectPosition="selectPosition($event)" />
+            <div class="src-aside">
+              <ui-tabs>
+                <ui-tab title="token list">
+                  <token-list :tokenList="tokenList" @selectPosition="selectPosition($event)"></token-list>
+                </ui-tab>
+                <ui-tab title="error list">
+                  <error-list :errorList="errorList" @selectPosition="selectPosition($event)"></error-list>
+                </ui-tab>
+              </ui-tabs>
+            </div>
           </ui-tab>
           <ui-tab icon="device_hub">
             <ast-viewer :ast="ast"></ast-viewer>
@@ -67,6 +76,7 @@ import MonacoTokenizer from '../util/monaco-tokenizer';
 
 import ErrorList from './editor/error-list';
 import MonacoEditor from './editor/monaco-editor';
+import TokenList from './editor/token-list';
 import FilePanel from './file-panel/file-panel';
 import AstViewer from './syntax/ast-viewer';
 import Intermediate from './intermediate/intermediate';
@@ -97,6 +107,7 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
   components: {
     MonacoEditor,
     ErrorList,
+    TokenList,
     AstViewer,
     QuadViewer,
     Intermediate,
@@ -106,11 +117,12 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
 })
 export default class Index extends Vue {
   editor: monaco.editor.ICodeEditor;
-  editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
-  ast: ParseNode | null = null
-  quadrupleTable: Quadruple[] = []
+  editorOptions = MonacoTokenizer.defaultMonacoEditorOptions;
+  ast: ParseNode | null = null;
+  tokenList: Token[] = [];
+  quadrupleTable: Quadruple[] = [];
   errorList: PicolError[] = [];
-  contextTree: ExecutionContext | null = null
+  contextTree: ExecutionContext | null = null;
 
   get code(): string {
     return fileModel.currentFile.src;
@@ -176,6 +188,7 @@ export default class Index extends Vue {
     // Lexer
     const lexerMarkers: monaco.editor.IMarkerData[] = [];
     const tokenList = Array.from(core.lexer(code));
+    this.tokenList = tokenList;
     tokenList.map((t) => {
       if (t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE) {
         this.errorList.push(PicolError.lexerError('unknown token', t));
@@ -434,7 +447,12 @@ a.github-corner {
 
 .src-editor {
   height: 100%;
-  width: calc(100% - 350px);
+  width: calc(100% - 400px);
   /*flex: 1;*/
+}
+
+.src-aside {
+  height: 100%;
+  width: 400px;
 }
 </style>

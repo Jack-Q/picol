@@ -6,7 +6,7 @@ import { generator } from './lib/quad-gen';
 
 export { ErrorSeverity, ErrorList, PicolError } from './lib/error';
 
-export { Token, TokenType, PrimitiveType, RangePosition } from './lib/token';
+export { Token, TokenType, PrimitiveType, RangePosition, TokenTypeUtil } from './lib/token';
 export { ParseNode, ParseNodeType, ParseOperatorType } from './lib/parser-node';
 export { Quadruple, QuadrupleArgType } from './lib/quadruple';
 export { ExecutionContext } from './lib/context';

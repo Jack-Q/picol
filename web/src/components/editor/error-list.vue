@@ -83,7 +83,7 @@ export default class ErrorList extends Vue {
   .root {
     flex: 0;
     border-left: solid #eee 1px;
-    min-width: 350px;
+    min-width: 400px;
   }
   .list {
     display: flex;
@@ -120,6 +120,7 @@ export default class ErrorList extends Vue {
 
   .filter {
     display: flex;
+    min-height: 35px;
   }
   .filter > div {
     flex: 1;
