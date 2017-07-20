@@ -155,8 +155,10 @@ const matchers:
       // check number format
       if (isFloat) {
         // float
+        val = parseFloat(lit);
       } else {
         // integer
+        val = parseInt(lit, 10);
         if (val < - (2 ** 15) || val > 2 ** 15 - 1) {
           return new Token(TokenType.INV_VALUE, lit, rangePos, 'invalid integer literal');
         }
