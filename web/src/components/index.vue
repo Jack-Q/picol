@@ -172,11 +172,14 @@ export default class Index extends Vue {
           current.model = monaco.editor.createModel(current.src, 'Picol');
         }
         this.editor.setModel(current.model);
+        // trigger an code change for compiling content synchronization
+        this.editorCodeChange(this.editor);
       }
     }
   }
 
   editorCodeChange(editor: monaco.editor.ICodeEditor){
+    console.log("update code content and recompiling")
     const model = editor.getModel();
     const code = model.getValue();
     fileModel.currentFile.src = code;
