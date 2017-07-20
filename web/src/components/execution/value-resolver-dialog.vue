@@ -35,9 +35,13 @@
     </div>
     <div v-else-if="valueType == 'getBoolean'">
       <div class="model-header">Please provide an integer value</div>
-      <div>
-        <div class="boolean-option" :class="{on: boolValue}" @click="boolValue=true"></div>
-        <div class="boolean-option" :class="{on: !boolValue}" @click="boolValue=false"></div>
+      <div class="boolean-option-box">
+        <div class="boolean-option" :class="{on: !!boolValue}" @click="setBoolValue(true)">
+          <code>true</code>
+        </div>
+        <div class="boolean-option" :class="{on: !boolValue}" @click="setBoolValue(false)">
+          <code>false</code>
+        </div>
       </div>
       <div class="model-button-bar">
         <ui-button @click="submitBool">OK</ui-button>
@@ -66,6 +70,11 @@ export default class ValueResolverDialog extends Vue {
     this.intValue = 0;
     this.floatNumber = 0;
     this.boolValue = false;
+  }
+
+  setBoolValue(val: boolean) {
+    this.boolValue = val;
+    this.$forceUpdate();
   }
 
   submitChar() {
@@ -115,6 +124,29 @@ export default class ValueResolverDialog extends Vue {
 .model-button-bar {
   border-top: dashed 3px #ccc;
   text-align: center;
+}
+
+.boolean-option-box {
+  height: 80px;
+  display: flex;
+  margin: 30px;
+}
+
+.boolean-option {
+  flex: 1;
+  line-height: 80px;
+  margin: auto;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: all ease 400ms;
+  pointer-events: all;
+  border: solid 1px rgba(120,140,220,0.5);
+}
+
+.boolean-option.on {
+  background: rgba(120,140,220,0.1);
+  box-shadow: 0 0 15px 2px rgba(120,140,220,0.4);
 }
 
 </style>

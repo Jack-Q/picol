@@ -361,7 +361,7 @@ export class Executor {
       getInt: async () => await this.parameterProvider.getInteger(),
       getChar: async () => await this.parameterProvider.getChar(),
       getFloat: async () => await this.parameterProvider.getFloat(),
-      getBoolean: async () => await this.parameterProvider.getBoolean(),
+      getBool: async () => await this.parameterProvider.getBoolean(),
     };
     return await buildInImpl[name](...param);
   }

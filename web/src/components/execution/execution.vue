@@ -328,6 +328,6 @@ dd {
 
 .parameter-dialog-root.on {
   opacity: 1;
-  max-height: 3000px;
+  max-height: 100vh;
 }
 </style>
