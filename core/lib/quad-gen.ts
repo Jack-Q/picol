@@ -193,8 +193,10 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
   // Self-increment / decrement
   const temp = ctx.getTempVar();
   let temp2: QuadrupleArg | undefined;
-  const Q_ZERO = new QuadrupleArgValue(PrimitiveType.INT, 0);
-  const Q_ONE = new QuadrupleArgValue(PrimitiveType.INT, 1);
+  const Q_ZERO_I = new QuadrupleArgValue(PrimitiveType.INT, 0);
+  const Q_ONE_I = new QuadrupleArgValue(PrimitiveType.INT, 1);
+  const Q_ZERO_F = new QuadrupleArgValue(PrimitiveType.FLOAT, 0);
+  const Q_ONE_F = new QuadrupleArgValue(PrimitiveType.FLOAT, 1);
 
   // following operations are all requires to be performed on numbers
   // and the type of the result is the same as the parameter (float, char, int)
@@ -203,30 +205,59 @@ const generateExpressionUnary: generateRule<AttrExpr> = (ctx, node) => {
     ctx.err.error(new GeneratorError('self-increment/decrement operator cannot be applied to bool', node.token));
     return AttrExpr.newQuadrupleRef(opVal, operand.entryType);
   }
-  switch (node.value) {
-    case ParseOperatorType.UNI_INC_PRE:
-      ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ONE, temp);
-      assign(ctx, temp, operand, node.children[0].token);
-      break;
-    case ParseOperatorType.UNI_INC_POS:
-      ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO, temp);
-      temp2 = ctx.getTempVar();
-      ctx.addQuadruple(QuadrupleOperator.I_ADD, temp, Q_ONE, temp2);
-      assign(ctx, temp2, operand, node.children[0].token);
-      break;
-    case ParseOperatorType.UNI_DEC_PRE:
-      ctx.addQuadruple(QuadrupleOperator.I_SUB, opVal, Q_ONE, temp);
-      assign(ctx, temp, operand, node.children[0].token);
-      break;
-    case ParseOperatorType.UNI_DEC_POS:
-      ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO, temp);
-      temp2 = ctx.getTempVar();
-      ctx.addQuadruple(QuadrupleOperator.I_SUB, temp, Q_ONE, temp2);
-      assign(ctx, temp2, operand, node.children[0].token);
-      break;
-    default:
-      ctx.err.error(new GeneratorError('unknown unary operator', node.token));
+
+  if (operand.entryType.primitiveType === PrimitiveType.FLOAT) {
+    switch (node.value) {
+      case ParseOperatorType.UNI_INC_PRE:
+        ctx.addQuadruple(QuadrupleOperator.R_ADD, opVal, Q_ONE_F, temp);
+        assign(ctx, temp, operand, node.children[0].token);
+        break;
+      case ParseOperatorType.UNI_INC_POS:
+        ctx.addQuadruple(QuadrupleOperator.R_ADD, opVal, Q_ZERO_F, temp);
+        temp2 = ctx.getTempVar();
+        ctx.addQuadruple(QuadrupleOperator.R_ADD, temp, Q_ONE_F, temp2);
+        assign(ctx, temp2, operand, node.children[0].token);
+        break;
+      case ParseOperatorType.UNI_DEC_PRE:
+        ctx.addQuadruple(QuadrupleOperator.R_SUB, opVal, Q_ONE_F, temp);
+        assign(ctx, temp, operand, node.children[0].token);
+        break;
+      case ParseOperatorType.UNI_DEC_POS:
+        ctx.addQuadruple(QuadrupleOperator.R_ADD, opVal, Q_ZERO_F, temp);
+        temp2 = ctx.getTempVar();
+        ctx.addQuadruple(QuadrupleOperator.R_SUB, temp, Q_ONE_F, temp2);
+        assign(ctx, temp2, operand, node.children[0].token);
+        break;
+      default:
+        ctx.err.error(new GeneratorError('unknown unary operator', node.token));
+    }
+  } else {
+    switch (node.value) {
+      case ParseOperatorType.UNI_INC_PRE:
+        ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ONE_I, temp);
+        assign(ctx, temp, operand, node.children[0].token);
+        break;
+      case ParseOperatorType.UNI_INC_POS:
+        ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO_I, temp);
+        temp2 = ctx.getTempVar();
+        ctx.addQuadruple(QuadrupleOperator.I_ADD, temp, Q_ONE_I, temp2);
+        assign(ctx, temp2, operand, node.children[0].token);
+        break;
+      case ParseOperatorType.UNI_DEC_PRE:
+        ctx.addQuadruple(QuadrupleOperator.I_SUB, opVal, Q_ONE_I, temp);
+        assign(ctx, temp, operand, node.children[0].token);
+        break;
+      case ParseOperatorType.UNI_DEC_POS:
+        ctx.addQuadruple(QuadrupleOperator.I_ADD, opVal, Q_ZERO_I, temp);
+        temp2 = ctx.getTempVar();
+        ctx.addQuadruple(QuadrupleOperator.I_SUB, temp, Q_ONE_I, temp2);
+        assign(ctx, temp2, operand, node.children[0].token);
+        break;
+      default:
+        ctx.err.error(new GeneratorError('unknown unary operator', node.token));
+    }
   }
+
   return AttrExpr.newQuadrupleRef(temp, operand.entryType);
 };
 
