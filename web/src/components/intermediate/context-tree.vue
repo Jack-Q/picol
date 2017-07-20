@@ -9,6 +9,10 @@
         <i>unnamed</i>
       </div>
       <div class="context-title-actions">
+        <div class="context-title-action" ref="title-action-save" @click.stop="saveContext">
+          <ui-tooltip trigger="title-action-save"> dump current portion of context to file</ui-tooltip>
+          <i class="material-icons">save</i>
+        </div>
         <div class="context-title-action" ref="title-action-hide" :class="{on: hideVariable}" @click.stop="hideVariable = ! hideVariable">
           <ui-tooltip trigger="title-action-hide">{{ hideVariable ? "show" : "hide"}} symbols in this context</ui-tooltip>
           <i class="material-icons">low_priority</i>
@@ -63,7 +67,7 @@
 
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import { Quadruple } from '../../../../core/main';
+import { Quadruple, ExecutionContext } from '../../../../core/main';
 
 @Component({
   name: 'context-tree',
@@ -77,6 +81,18 @@ export default class ContextTree extends Vue {
   open = true;
   isEmpty(object: Object): boolean {
     return Object.keys(object).filter(k => k !== '__ob__').length > 0;
+  }
+  saveContext(): void {
+    if(!this.contextTree){
+      return;
+    }
+    const content = (this.contextTree as ExecutionContext).dump(2);
+    const helperElement = document.createElement('a');
+    helperElement.download = 'context.txt';
+    helperElement.href = window.URL.createObjectURL(new Blob([content], {
+      type: 'octet/stream',
+    }));
+    helperElement.click();
   }
 }
 </script>
@@ -114,6 +130,7 @@ export default class ContextTree extends Vue {
 }
 
 .context-title-action {
+  display: inline-block;
   height: 45px;
   min-width: 45px;
   text-align: center;
