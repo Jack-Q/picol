@@ -5,8 +5,14 @@
         <span>{{errorList.length}}</span>
         errors / warnings
       </div>
+      <div class="filter">
+        <div :class="{on: filter === ''}" @click="filter=''">ALL</div>
+        <div :class="{on: filter === 'lex'}" @click="filter='lex'">Lex</div>
+        <div :class="{on: filter === 'par'}" @click="filter='par'">Par</div>
+        <div :class="{on: filter === 'gen'}" @click="filter='gen'">Gen</div>
+      </div>
       <div class="error-list">
-        <div v-for="(e, i) in errorList" :key="i" class="error-item" :class="getSeverity(e.severity)">
+        <div v-for="e in errorList.filter(e => e.name.toLowerCase().indexOf(filter) >= 0)" :key="errorList.indexOf(e)" class="error-item" :class="getSeverity(e.severity)">
           <div class="severity">
             <ui-icon>{{getIconName(e.severity)}}</ui-icon>
           </div>
@@ -26,9 +32,18 @@
             </span>
           </div>
         </div>
+        <div v-if="errorList.filter(e => e.name.toLowerCase().indexOf(filter) >= 0).length === 0" class="empty-tip">
+          <div class="empty-icon">
+            <i class="material-icons">check_circle</i>
+          </div>
+          No error found in this pass
+        </div>
       </div>
     </div>
     <div v-else class="empty-tip">
+      <div class="empty-icon">
+        <i class="material-icons">check_circle</i>
+      </div>
       No lexical or syntactic error detected.
     </div>
   </div>
@@ -43,6 +58,8 @@ import { ErrorSeverity, RangePosition } from '../../../../core/main';
 })
 export default class ErrorList extends Vue {
   @Prop errorList = p({type: Array})
+
+  filter=''
 
   getSeverity(severity: ErrorSeverity): string{
     return ErrorSeverity[severity];
@@ -77,8 +94,17 @@ export default class ErrorList extends Vue {
     font-size: 2em;
     color: #cccccc;
     height: 100%;
-    margin: 20px;
+    margin: auto 20px;
   }
+
+  .empty-icon {
+    padding: 20px auto;
+  }
+
+  .empty-icon > i {
+    font-size: 64px;
+  }
+
   .summary {
     height: 45px;
     background: #eee;
@@ -91,6 +117,24 @@ export default class ErrorList extends Vue {
   .summary span {
     color: #f85;
   }
+
+  .filter {
+    display: flex;
+  }
+  .filter > div {
+    flex: 1;
+    text-align: center;
+    margin: auto;
+    height: 35px;
+    line-height: 35px;
+    cursor: pointer;
+    background: #eee;
+    transition: all ease 400ms;
+  }
+  .filter > div.on {
+    background: #fff;
+  }
+
   .error-list {
     overflow-y: auto;
     flex: 1;

@@ -54,7 +54,6 @@ Currently, this project is still in progress. Some of unimplemented features are
   * [ ] More complete CLI
 * UI (PICOL)
   * [ ] Local file as source and target
-  * [ ] Blocking build-in function for executor
   * [ ] Memory view for sparse array in JavaScript
   * [ ] Mobile screen adaption
 
