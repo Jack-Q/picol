@@ -134,8 +134,6 @@ class FileModel {
         this.addNew(fileName, loadEvent.target.result);
       };
     }
-    // files.map((localFile) => {
-    // });
   }
 
   public deleteFile(f: IEditingFile): void {

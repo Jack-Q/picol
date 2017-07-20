@@ -1,6 +1,6 @@
 <template>
   <div class="intermediate-root" v-if="contextTree || quadList.length">
-    <context-tree :contextTree="contextTree"></context-tree>
+    <context-tree :contextTree="contextTree" :isRoot="true"></context-tree>
     <quad-viewer :quadList="quadList"></quad-viewer>
   </div>
   <div v-else class="tip">
@@ -25,6 +25,8 @@ import QuadViewer from './quad-viewer';
 export default class Intermediate extends Vue {
   @Prop quadList = p({type: Array})
   @Prop contextTree = p({type: Object})
+
+  
 }
 </script>
 
