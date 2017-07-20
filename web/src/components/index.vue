@@ -10,12 +10,9 @@
     </a>
     <div class="header">
       <div class="logo-box">
-        <svg
-          class="logo"
-          viewBox="0 0 200 100">
+        <svg class="logo" viewBox="0 0 200 100">
           <g>
-            <path
-              d="M 8.125 0 L 45.625 50 L 15 50 L 0 50 L 0 65 L 0 100 L 15 100 L 15 65 L 45.625 65 L 19.375 100 L 38.125 100 L 70 57.5 L 26.875 0 L 8.125 0 z M 138.125 0 L 95 57.5 L 126.875 100 L 145.625 100 L 113.75 57.5 L 156.875 0 L 138.125 0 z M 185 0 L 185 85 L 200 85 L 200 0 L 185 0 z M 75 15 L 75 75 L 90 75 L 90 15 L 75 15 z M 152.5 40 A 17.500001 17.499955 0 0 0 135 57.5 A 17.500001 17.499955 0 0 0 152.5 75 A 17.500001 17.499955 0 0 0 170 57.5 A 17.500001 17.499955 0 0 0 152.5 40 z M 82.5 80 A 7.5000002 7.4999853 0 0 0 75 87.5 A 7.5000002 7.4999853 0 0 0 82.5 95 A 7.5000002 7.4999853 0 0 0 90 87.5 A 7.5000002 7.4999853 0 0 0 82.5 80 z "/>
+            <path d="M 8.125 0 L 45.625 50 L 15 50 L 0 50 L 0 65 L 0 100 L 15 100 L 15 65 L 45.625 65 L 19.375 100 L 38.125 100 L 70 57.5 L 26.875 0 L 8.125 0 z M 138.125 0 L 95 57.5 L 126.875 100 L 145.625 100 L 113.75 57.5 L 156.875 0 L 138.125 0 z M 185 0 L 185 85 L 200 85 L 200 0 L 185 0 z M 75 15 L 75 75 L 90 75 L 90 15 L 75 15 z M 152.5 40 A 17.500001 17.499955 0 0 0 135 57.5 A 17.500001 17.499955 0 0 0 152.5 75 A 17.500001 17.499955 0 0 0 170 57.5 A 17.500001 17.499955 0 0 0 152.5 40 z M 82.5 80 A 7.5000002 7.4999853 0 0 0 75 87.5 A 7.5000002 7.4999853 0 0 0 82.5 95 A 7.5000002 7.4999853 0 0 0 90 87.5 A 7.5000002 7.4999853 0 0 0 82.5 80 z " />
           </g>
         </svg>
         <a href="https://github.com/Jack-Q/" class="header-right">
@@ -32,7 +29,7 @@
           Picol
         </div>
       </div>
-      
+  
     </div>
     <div class="body">
       <div class="left-aside">
@@ -42,17 +39,7 @@
         <ui-tabs type="icon" fullwidth>
           <ui-tab icon="code">
             <div class="src-editor">
-              <monaco-editor
-                :code="code"
-                :options="editorOptions"
-                srcPath='./'
-                width='100%'
-                height='100%'
-                theme='PicolTheme'
-                @saveContent=""
-                @mounted="editorMounted($event)"
-                @codeChange="editorCodeChange"
-                language='Picol'>
+              <monaco-editor :code="code" :options="editorOptions" srcPath='./' width='100%' height='100%' theme='PicolTheme' @saveContent="" @mounted="editorMounted($event)" @codeChange="editorCodeChange" language='Picol'>
               </monaco-editor>
             </div>
             <ErrorList :errorList="errorList" @selectPosition="selectPosition($event)" />
@@ -96,11 +83,11 @@ const loadLanguage = (): void => {
 };
 
 const createMarker = (source: string, message: string, t: Token): monaco.editor.IMarkerData => ({
-  startLineNumber: t.position.startLine, 
-  startColumn: t.position.startCol, 
-  endLineNumber: t.position.endLine || t.position.startLine, 
-  endColumn: t.position.endCol || t.position.startCol + t.literal.length, 
-  message, 
+  startLineNumber: t.position.startLine,
+  startColumn: t.position.startCol,
+  endLineNumber: t.position.endLine || t.position.startLine,
+  endColumn: t.position.endCol || t.position.startCol + t.literal.length,
+  message,
   severity: monaco.Severity.Error,
   source: source
 });
@@ -120,10 +107,10 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
 export default class Index extends Vue {
   editor: monaco.editor.ICodeEditor;
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions
-  ast: ParseNode|null = null
+  ast: ParseNode | null = null
   quadrupleTable: Quadruple[] = []
   errorList: PicolError[] = [];
-  contextTree: ExecutionContext|null = null
+  contextTree: ExecutionContext | null = null
 
   get code(): string {
     return fileModel.currentFile.src;
@@ -132,7 +119,7 @@ export default class Index extends Vue {
   editorMounted(editor: monaco.editor.ICodeEditor) {
     this.editor = editor;
     loadLanguage();
-    
+
     const standAloneCodeEditor = this.editor as monaco.editor.IStandaloneCodeEditor;
     standAloneCodeEditor.addAction({
       // Save Content Action (Ctrl + S)
@@ -163,12 +150,12 @@ export default class Index extends Vue {
     });
   }
 
-  @Lifecycle beforeUpdate(){
+  @Lifecycle beforeUpdate() {
     // update model selection
     const current = fileModel.currentFile;
-    if(!current.model || current.model !== this.editor.getModel()){
-      if(this.editor){
-        if(!current.model){
+    if (!current.model || current.model !== this.editor.getModel()) {
+      if (this.editor) {
+        if (!current.model) {
           current.model = monaco.editor.createModel(current.src, 'Picol');
         }
         this.editor.setModel(current.model);
@@ -178,8 +165,7 @@ export default class Index extends Vue {
     }
   }
 
-  editorCodeChange(editor: monaco.editor.ICodeEditor){
-    console.log("update code content and recompiling")
+  editorCodeChange(editor: monaco.editor.ICodeEditor) {
     const model = editor.getModel();
     const code = model.getValue();
     fileModel.currentFile.src = code;
@@ -190,8 +176,8 @@ export default class Index extends Vue {
     // Lexer
     const lexerMarkers: monaco.editor.IMarkerData[] = [];
     const tokenList = Array.from(core.lexer(code));
-    tokenList.map((t)=>{
-      if(t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE){
+    tokenList.map((t) => {
+      if (t.type === TokenType.INV_NO_MATCH || t.type === TokenType.INV_VALUE) {
         this.errorList.push(PicolError.lexerError('unknown token', t));
         lexerMarkers.push(createMarker("Lexer", t.value, t));
         return;
@@ -201,14 +187,14 @@ export default class Index extends Vue {
       }
     })
     monaco.editor.setModelMarkers(model, "Lexer", lexerMarkers);
-    
+
     // Parser
-    const parserMarkers:  monaco.editor.IMarkerData[] = [];
-    try{
+    const parserMarkers: monaco.editor.IMarkerData[] = [];
+    try {
       const parserResult = core.parser(tokenList);
       const ast = parserResult.ast;
       this.ast = ast;
-      if(parserResult.errorList.length > 0){
+      if (parserResult.errorList.length > 0) {
         // add errors to side list
         this.errorList.push(...parserResult.errorList);
         // add errors
@@ -217,7 +203,7 @@ export default class Index extends Vue {
           parserMarkers.push(createMarker("Parser", e.message, t));
         });
       }
-    } catch(e){
+    } catch (e) {
       console.log(e)
       this.errorList.push(e as PicolError);
       const t: Token = e.token || tokenList[tokenList.length - 1];
@@ -226,9 +212,9 @@ export default class Index extends Vue {
     monaco.editor.setModelMarkers(model, "Parser", parserMarkers);
 
     // Generator
-    const generatorMarkers:  monaco.editor.IMarkerData[] = [];
-    try{
-      if(this.ast){
+    const generatorMarkers: monaco.editor.IMarkerData[] = [];
+    try {
+      if (this.ast) {
         const context = core.generator(this.ast);
         this.contextTree = context.contextTree;
         this.quadrupleTable = context.quadrupleList;
@@ -241,7 +227,7 @@ export default class Index extends Vue {
           generatorMarkers.push(createMarker("Generator", e.message, t));
         });
       }
-    }catch(e){
+    } catch (e) {
       this.errorList.push(e as PicolError);
       const t: Token = e.token || tokenList[tokenList.length - 1];
       generatorMarkers.push(createMarker("Generator", e.message, t));
@@ -264,10 +250,10 @@ export default class Index extends Vue {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style>
-
 a {
   color: #42b983;
 }
+
 a.github-corner {
   transform: rotate(45deg);
   width: 114px;
@@ -278,6 +264,7 @@ a.github-corner {
   z-index: 1000;
   overflow: hidden;
 }
+
 .github-corner svg {
   fill: #70B7FD;
   color: #fff;
@@ -288,9 +275,11 @@ a.github-corner {
   z-index: 10000;
   transform: rotate(-45deg) translate(-64px, 40px);
 }
+
 .github-corner:hover .octo-arm {
   animation: octocat-wave 560ms ease-in-out
 }
+
 @keyframes octocat-wave {
   0%,
   100% {
@@ -305,6 +294,7 @@ a.github-corner {
     transform: rotate(10deg)
   }
 }
+
 @media (max-width:500px) {
   .github-corner:hover .octo-arm {
     animation: none
@@ -314,14 +304,13 @@ a.github-corner {
   }
 }
 
-
-
-.root{
+.root {
   height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
 }
+
 .header {
   height: 35px;
   font-family: 'Josefin Slab';
@@ -329,6 +318,7 @@ a.github-corner {
   background: #eee;
   z-index: 100;
 }
+
 .logo-box {
   width: 100%;
   transition: all ease 400ms;
@@ -336,15 +326,18 @@ a.github-corner {
   overflow: hidden;
   background: #eee;
 }
+
 .header .logo {
   height: 35px;
   width: 70px;
   fill: #999;
 }
+
 .logo-box:hover {
   height: 80px;
   box-shadow: 0 0 10px 2px #aaa;
 }
+
 .logo-tip {
   line-height: 35px;
   margin: 5px auto;
@@ -364,16 +357,19 @@ a.github-corner {
   line-height: 35px;
   font-size: 18px;
 }
+
 .logo-box:hover .header-right {
   height: 80px;
   line-height: 80px;
 }
+
 .header-right:hover {
   padding-left: 30px;
   padding-right: 85px;
   color: #666;
   background: rgba(255, 255, 255, 0.25);
 }
+
 .header-right svg {
   fill: #999;
   vertical-align: middle;
@@ -383,17 +379,22 @@ a.github-corner {
   flex: 1;
   display: flex;
 }
-.body > div {
+
+.body>div {
   position: relative;
   overflow-y: hidden;
 }
+
 .left-aside {
   flex: 1;
   min-width: 220px;
 }
 
+
 /* fix the height positioning issue in Safari */
-.left-aside > div, .main-stack > div {
+
+.left-aside>div,
+.main-stack>div {
   position: absolute;
   top: 0;
   bottom: 0;

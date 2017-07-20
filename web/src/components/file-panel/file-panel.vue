@@ -17,6 +17,11 @@
           <ui-icon>delete_sweep</ui-icon>
           <ui-ripple-ink trigger="action-delete" ></ui-ripple-ink>
         </div>
+        <label class="action" ref="local-file-open">
+          <ui-icon>file_upload</ui-icon>
+          <ui-ripple-ink trigger="local-file-open" ></ui-ripple-ink>
+          <input type="file" @change="model.loadLocalFile($event)" hidden required />
+        </label>
       </div>
       <div class="editing-list">
         <list-item v-for='(f,i) in model.fileList' :key="f.name" @click.native="model.select(i)" >
@@ -29,6 +34,7 @@
               <inline-action icon="settings_backup_restore" tooltip="reload from storage" @click="model.reload(f)"></inline-action>
               <inline-action icon="save" tooltip="save to storage" @click="model.saveFile(f)"></inline-action>
               <inline-action icon="delete" tooltip="delete" @click="model.deleteFile(f)"></inline-action>
+              <inline-action icon="file_download" tooltip="download source" @click="model.download(f)"></inline-action>
             </div>
           </div>
         </list-item>

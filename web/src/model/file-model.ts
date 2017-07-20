@@ -78,18 +78,11 @@ class FileModel {
     }, 100);
   }
 
-  public addNew() {
-    const src = '';
-    for (let i = 1; true; i++) {
-      const file = 'file-' + i;
-      if (this.fileList.every((f) => f.name !== file)) {
-        this.fileList.push({ name: file, savedSrc: src, src, version: 0});
-        this.current = this.fileList.length - 1;
-        if ((window as any).monaco) {
-          this.currentFile.model = monaco.editor.createModel(this.currentFile.src, 'Picol');
-        }
-        return;
-      }
+  public addNew(name: string = this.findAvailableName(), content: string = '') {
+    this.fileList.push({ name, savedSrc: content, src: content, version: 0});
+    this.current = this.fileList.length - 1;
+    if ((window as any).monaco) {
+      this.currentFile.model = monaco.editor.createModel(this.currentFile.src, 'Picol');
     }
   }
 
@@ -114,6 +107,35 @@ class FileModel {
     if (f.model) {
       f.model.setValue(f.src);
     }
+  }
+
+  public download(f: IEditingFile): void {
+    // download file will also trigger an local storage save
+    this.saveFile(f);
+    const content = f.savedSrc;
+    const helperElement = document.createElement('a');
+    helperElement.download = f.name + '.picol';
+    helperElement.href = window.URL.createObjectURL(new Blob([content], {
+      type: 'octet/stream',
+    }));
+    helperElement.click();
+  }
+
+  public loadLocalFile(e: any): void {
+    const files = e.target.files as File[];
+    for (const localFile of files) {
+      const fileNamePrefix = localFile.name.endsWith('.picol')
+        ? localFile.name.replace(/\.picol$/, '') : localFile.name;
+      const fileName = this.fileList.some((f) => f.name === fileNamePrefix)
+        ? this.findAvailableName(fileNamePrefix) : fileNamePrefix;
+      const fileReader = new FileReader();
+      fileReader.readAsText(localFile);
+      fileReader.onload = (loadEvent: any) => {
+        this.addNew(fileName, loadEvent.target.result);
+      };
+    }
+    // files.map((localFile) => {
+    // });
   }
 
   public deleteFile(f: IEditingFile): void {
@@ -153,6 +175,15 @@ class FileModel {
     return JSON.stringify(this.fileList.map((f) => ({
       name: f.name, savedSrc: f.savedSrc, src: f.src,
     })));
+  }
+
+  private findAvailableName(fileNamePrefix: string = 'file') {
+    for (let i = 1; true; i++) {
+      const file = fileNamePrefix + '-' + i;
+      if (this.fileList.every((f) => f.name !== file)) {
+        return file;
+      }
+    }
   }
 }
 
