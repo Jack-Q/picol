@@ -23,6 +23,12 @@ export enum QuadrupleOperator {
   R_MUL,
   R_DIV,
 
+  // type conversion
+  C_I2F, // int to float
+  C_I2C, // int to char
+  C_F2I, // float to int
+  C_C2I, // char to int
+
   // primitive variable assignment
   V_ASS,
 
