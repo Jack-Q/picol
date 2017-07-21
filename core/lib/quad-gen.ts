@@ -345,10 +345,36 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
   const lOp = generateExpression(ctx, node.children[0]);
   const rOp = generateExpression(ctx, node.children[1]);
 
+  const getConversionTargetType = (type1: PrimitiveType, type2: PrimitiveType) => {
+    if (type1 === PrimitiveType.FLOAT || type2 === PrimitiveType.FLOAT) {
+      return PrimitiveType.FLOAT;
+    }
+
+    if (type1 === PrimitiveType.CHAR && type2 === PrimitiveType.CHAR) {
+      return PrimitiveType.CHAR;
+    }
+
+    if (type1 === PrimitiveType.BOOL && type2 === PrimitiveType.BOOL) {
+      return PrimitiveType.BOOL;
+    }
+
+    if (type1 === PrimitiveType.INT || type2 === PrimitiveType.INT) {
+      return PrimitiveType.INT;
+    }
+
+    return PrimitiveType.INT;
+  };
+
   const genRelOperator = (qop: QuadrupleOperator): AttrExpr => {
-    const boolExpr = AttrExpr.newBoolExpr(ctx.nextQuadrupleIndex,
-      ctx.nextQuadrupleIndex + 1);
-    ctx.addQuadruple(qop, lOp.toValue(ctx), rOp.toValue(ctx), new QuadrupleArgQuadRef(0));
+    const targetType = getConversionTargetType(lOp.entryType.primitiveType, rOp.entryType.primitiveType);
+    const boolExpr = AttrExpr.newBoolExpr(ctx.nextQuadrupleIndex, ctx.nextQuadrupleIndex + 1);
+    const lOpValue = addTypeConversion(ctx, lOp, targetType, node.children[0].token);
+    const rOpValue = addTypeConversion(ctx, rOp, targetType, node.children[1].token);
+    if (targetType === PrimitiveType.BOOL && qop !== QuadrupleOperator.J_EQ && qop !== QuadrupleOperator.J_NE) {
+      ctx.err.error(new GeneratorError('only equal and not-equal comparison can be applied to bool values',
+        node.token));
+    }
+    ctx.addQuadruple(qop, lOpValue, rOpValue, new QuadrupleArgQuadRef(0));
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0));
     return boolExpr;
   };
