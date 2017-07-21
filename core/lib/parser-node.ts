@@ -28,6 +28,7 @@ export enum ParseOperatorType {
   BIN_ASS_SUB, // a -= b
   BIN_ASS_MUL, // a *= b
   BIN_ASS_DIV, // a /= b
+
 }
 
 export const getOperatorPriority = (op: ParseOperatorType) => {

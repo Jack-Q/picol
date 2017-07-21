@@ -135,6 +135,65 @@ const attr = {
   valid: (): IAttr => ({ isValid: true }),
 };
 
+const getItemType = (node: ParseNode): ValueTypeInfo => {
+  switch (node.type) {
+    case ParseNodeType.TYPE_ARRAY:
+      return createValueType.arr(node.children[0].children[0].value, node.children[0].children[1].children.length);
+    case ParseNodeType.TYPE_ARRAY_REF:
+      return createValueType.arrRef(node.children[0].value, node.value);
+    case ParseNodeType.TYPE_PRIMITIVE:
+      return createValueType.prim(node.value);
+  }
+  return createValueType.void();
+};
+
+const addTypeConversion = (ctx: GeneratorContext, src: AttrExpr, dstType: PrimitiveType, token?: Token):
+  QuadrupleArg => {
+  const srcType = src.entryType.primitiveType;
+
+  if (srcType === dstType) {
+    return src.toValue(ctx);
+  }
+
+  if (srcType === PrimitiveType.INT && dstType === PrimitiveType.FLOAT) {
+    const tempVar = ctx.getTempVar();
+    ctx.addQuadruple(QuadrupleOperator.C_I2F, src.toValue(ctx), Q_NULL, tempVar);
+    return tempVar;
+  }
+
+  if (srcType === PrimitiveType.INT && dstType === PrimitiveType.INT) {
+    const tempVar = ctx.getTempVar();
+    ctx.err.warn(new GeneratorError('precision loss in type conversion from int to char', token));
+    ctx.addQuadruple(QuadrupleOperator.C_I2C, src.toValue(ctx), Q_NULL, tempVar);
+    return tempVar;
+  }
+
+  if (srcType === PrimitiveType.FLOAT && dstType === PrimitiveType.INT) {
+    const tempVar = ctx.getTempVar();
+    ctx.err.warn(new GeneratorError('precision loss in type conversion from float to int', token));
+    ctx.addQuadruple(QuadrupleOperator.C_F2I, src.toValue(ctx), Q_NULL, tempVar);
+    return tempVar;
+  }
+
+  if (srcType === PrimitiveType.CHAR && dstType === PrimitiveType.INT) {
+    const tempVar = ctx.getTempVar();
+    ctx.err.warn(new GeneratorError('implicit type conversion from char to int', token));
+    ctx.addQuadruple(QuadrupleOperator.C_C2I, src.toValue(ctx), Q_NULL, tempVar);
+    return tempVar;
+  }
+
+  if (dstType === PrimitiveType.BOOL) {
+    // conversion via truly & falsy comparison
+    ctx.err.warn(new GeneratorError('precision loss in type conversion to boolean value', token));
+    src.toBoolean(ctx);
+    return src.toValue(ctx);
+  }
+
+  ctx.err.error(new GeneratorError('no viable conversion exists from '
+    + PrimitiveType[srcType] + ' to ' + PrimitiveType[dstType], token));
+  return src.toValue(ctx);
+};
+
 type generateRule<T extends IAttr> = (ctx: GeneratorContext, node: ParseNode, newContext?: boolean) => T;
 
 const assign = (ctx: GeneratorContext, val: QuadrupleArg, target: AttrExpr, token?: Token) => {
@@ -295,10 +354,9 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
   };
 
   const genAssOperator = (assOp: QuadrupleOperator): AttrExpr => {
-    // TODO: check the compatibility of the value to be assigned
-
+    const value = addTypeConversion(ctx, rOp, lOp.entryType.primitiveType, node.token);
     const temp = ctx.getTempVar();
-    ctx.addQuadruple(assOp, lOp.toRef(ctx, node.children[0].token), rOp.toValue(ctx), temp);
+    ctx.addQuadruple(assOp, lOp.toRef(ctx, node.children[0].token), value, temp);
     assign(ctx, temp, lOp, node.children[0].token);
 
     // the type of the result is the same as the value stored in the
@@ -306,10 +364,30 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
     return AttrExpr.newQuadrupleRef(temp, lOp.entryType);
   };
 
+  const convertIntOperatorToFloat = (intOp: QuadrupleOperator): QuadrupleOperator => {
+    switch (intOp) {
+      case QuadrupleOperator.I_ADD: return QuadrupleOperator.R_ADD;
+      case QuadrupleOperator.I_SUB: return QuadrupleOperator.R_SUB;
+      case QuadrupleOperator.I_MUL: return QuadrupleOperator.R_MUL;
+      case QuadrupleOperator.I_ADD: return QuadrupleOperator.R_DIV;
+    }
+    return intOp;
+  };
+
   const genIntOperator = (intOp: QuadrupleOperator): AttrExpr => {
-    const temp = ctx.getTempVar();
-    ctx.addQuadruple(intOp, lOp.toValue(ctx), rOp.toValue(ctx), temp);
-    return AttrExpr.newQuadrupleRef(temp, createValueType.prim(PrimitiveType.INT));
+    if (lOp.entryType.primitiveType === PrimitiveType.FLOAT || rOp.entryType.primitiveType === PrimitiveType.FLOAT) {
+      const floatLeftOp = addTypeConversion(ctx, lOp, PrimitiveType.FLOAT, node.children[0].token);
+      const floatRightOp = addTypeConversion(ctx, rOp, PrimitiveType.FLOAT, node.children[1].token);
+      const temp = ctx.getTempVar();
+      ctx.addQuadruple(convertIntOperatorToFloat(intOp), floatLeftOp, floatRightOp, temp);
+      return AttrExpr.newQuadrupleRef(temp, createValueType.prim(PrimitiveType.FLOAT));
+    } else {
+      const intLeftOp = addTypeConversion(ctx, lOp, PrimitiveType.INT, node.children[0].token);
+      const intRightOp = addTypeConversion(ctx, rOp, PrimitiveType.INT, node.children[1].token);
+      const temp = ctx.getTempVar();
+      ctx.addQuadruple(intOp, intLeftOp, intRightOp, temp);
+      return AttrExpr.newQuadrupleRef(temp, createValueType.prim(PrimitiveType.INT));
+    }
   };
 
   switch (op) {
@@ -322,9 +400,11 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
     case ParseOperatorType.BIN_ASS_SUB: return genAssOperator(QuadrupleOperator.I_SUB);
     case ParseOperatorType.BIN_ASS_MUL: return genAssOperator(QuadrupleOperator.I_MUL);
     case ParseOperatorType.BIN_ASS_DIV: return genAssOperator(QuadrupleOperator.I_DIV);
-    case ParseOperatorType.BIN_ASS_VAL:
-      assign(ctx, rOp.toValue(ctx), lOp, node.children[0].token);
+    case ParseOperatorType.BIN_ASS_VAL: {
+      const value = addTypeConversion(ctx, rOp, lOp.entryType.primitiveType, node.token);
+      assign(ctx, value, lOp, node.children[0].token);
       return AttrExpr.newQuadrupleRef(lOp.toRef(ctx, node.children[0].token), lOp.entryType);
+    }
 
     case ParseOperatorType.BIN_REL_EQ: return genRelOperator(QuadrupleOperator.J_EQ);
     case ParseOperatorType.BIN_REL_GT: return genRelOperator(QuadrupleOperator.J_GT);
@@ -485,65 +565,6 @@ const generateExpression: generateRule<AttrExpr> = (ctx, node) => {
     default:
       return AttrExpr.newPrimValue(PrimitiveType.VOID, null);
   }
-};
-
-const getItemType = (node: ParseNode): ValueTypeInfo => {
-  switch (node.type) {
-    case ParseNodeType.TYPE_ARRAY:
-      return createValueType.arr(node.children[0].children[0].value, node.children[0].children[1].children.length);
-    case ParseNodeType.TYPE_ARRAY_REF:
-      return createValueType.arrRef(node.children[0].value, node.value);
-    case ParseNodeType.TYPE_PRIMITIVE:
-      return createValueType.prim(node.value);
-  }
-  return createValueType.void();
-};
-
-const addTypeConversion = (ctx: GeneratorContext, src: AttrExpr, dstType: PrimitiveType, token?: Token):
-  QuadrupleArg => {
-  const srcType = src.entryType.primitiveType;
-
-  if (srcType === dstType) {
-    return src.toValue(ctx);
-  }
-
-  if (srcType === PrimitiveType.INT && dstType === PrimitiveType.FLOAT) {
-    const tempVar = ctx.getTempVar();
-    ctx.addQuadruple(QuadrupleOperator.C_I2F, src.toValue(ctx), Q_NULL, tempVar);
-    return tempVar;
-  }
-
-  if (srcType === PrimitiveType.INT && dstType === PrimitiveType.INT) {
-    const tempVar = ctx.getTempVar();
-    ctx.err.warn(new GeneratorError('precision loss in type conversion from int to char', token));
-    ctx.addQuadruple(QuadrupleOperator.C_I2C, src.toValue(ctx), Q_NULL, tempVar);
-    return tempVar;
-  }
-
-  if (srcType === PrimitiveType.FLOAT && dstType === PrimitiveType.INT) {
-    const tempVar = ctx.getTempVar();
-    ctx.err.warn(new GeneratorError('precision loss in type conversion from float to int', token));
-    ctx.addQuadruple(QuadrupleOperator.C_F2I, src.toValue(ctx), Q_NULL, tempVar);
-    return tempVar;
-  }
-
-  if (srcType === PrimitiveType.CHAR && dstType === PrimitiveType.INT) {
-    const tempVar = ctx.getTempVar();
-    ctx.err.warn(new GeneratorError('implicit type conversion from char to int', token));
-    ctx.addQuadruple(QuadrupleOperator.C_C2I, src.toValue(ctx), Q_NULL, tempVar);
-    return tempVar;
-  }
-
-  if (dstType === PrimitiveType.BOOL) {
-    // conversion via truly & falsy comparison
-    ctx.err.warn(new GeneratorError('precision loss in type conversion to boolean value', token));
-    src.toBoolean(ctx);
-    return src.toValue(ctx);
-  }
-
-  ctx.err.error(new GeneratorError('no viable conversion exists from '
-    + PrimitiveType[srcType] + ' to ' + PrimitiveType[dstType], token));
-  return src.toValue(ctx);
 };
 
 const generateDeclarationPrimitive: generateRule<IAttr> = (ctx, node) => {
