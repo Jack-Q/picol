@@ -386,13 +386,13 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
 
   const genRelOperator = (qop: QuadrupleOperator): AttrExpr => {
     const targetType = getConversionTargetType(lOp.entryType.primitiveType, rOp.entryType.primitiveType);
-    const boolExpr = AttrExpr.newBoolExpr(ctx.nextQuadrupleIndex, ctx.nextQuadrupleIndex + 1);
     const lOpValue = addTypeConversion(ctx, lOp, targetType, node.children[0].token);
     const rOpValue = addTypeConversion(ctx, rOp, targetType, node.children[1].token);
     if (targetType === PrimitiveType.BOOL && qop !== QuadrupleOperator.J_EQ && qop !== QuadrupleOperator.J_NE) {
       ctx.err.error(new GeneratorError('only equal and not-equal comparison can be applied to bool values',
         node.token));
     }
+    const boolExpr = AttrExpr.newBoolExpr(ctx.nextQuadrupleIndex, ctx.nextQuadrupleIndex + 1);
     ctx.addQuadruple(qop, lOpValue, rOpValue, new QuadrupleArgQuadRef(0));
     ctx.addQuadruple(QuadrupleOperator.J_JMP, Q_NULL, Q_NULL, new QuadrupleArgQuadRef(0));
     return boolExpr;
