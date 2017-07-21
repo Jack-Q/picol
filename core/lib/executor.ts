@@ -112,6 +112,20 @@ export class Executor {
         }
         break;
 
+      // type conversion operation
+      case QuadrupleOperator.C_I2C:
+      case QuadrupleOperator.C_I2F:
+      case QuadrupleOperator.C_C2I:
+      case QuadrupleOperator.C_F2I:
+        {
+          const val = this.getValue(quad.argument1);
+          const result = this.convertByOperator(quad.operator, val.value);
+          const target = quad.result as QuadrupleArgVarTemp;
+          console.log(target, result);
+          arraySet(this.temp, target.tempIndex, result.value);
+        }
+        break;
+
       // primitive variable assignment
       case QuadrupleOperator.V_ASS:
         {
@@ -308,6 +322,17 @@ export class Executor {
       case QuadrupleOperator.R_SUB: return { value: val1 - val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
       case QuadrupleOperator.R_MUL: return { value: val1 * val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
       case QuadrupleOperator.R_DIV: return { value: val1 / val2, span: getPrimitiveSize(PrimitiveType.FLOAT) };
+    }
+    return { value: 0, span: 0 };
+  }
+
+  private convertByOperator(op: QuadrupleOperator, val: number): IExecutionVal {
+    switch (op) {
+      case QuadrupleOperator.C_C2I: return { value: val, span: getPrimitiveSize(PrimitiveType.INT) };
+      case QuadrupleOperator.C_F2I: return { value: Math.round(val), span: getPrimitiveSize(PrimitiveType.INT) };
+      // tslint:disable-next-line:no-bitwise
+      case QuadrupleOperator.C_I2C: return { value: val & 0xff, span: getPrimitiveSize(PrimitiveType.CHAR) };
+      case QuadrupleOperator.C_I2F: return { value: val, span: getPrimitiveSize(PrimitiveType.FLOAT) };
     }
     return { value: 0, span: 0 };
   }
