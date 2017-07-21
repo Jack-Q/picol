@@ -327,10 +327,16 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
     const isAnd = op === ParseOperatorType.BIN_LOG_AND;
 
     const logicalLeftOp = generateExpression(ctx, node.children[0]);
+    if (logicalLeftOp.entryType.type !== ValueType.PRIMITIVE) {
+      ctx.err.error(new GeneratorError('cannot use reference in logical expression', node.children[0].token));
+    }
     logicalLeftOp.toBoolean(ctx);
     ctx.backPatchChain(isAnd ? logicalLeftOp.trueChain : logicalLeftOp.falseChain, ctx.nextQuadrupleIndex);
 
     const logicalRightOp = generateExpression(ctx, node.children[1]);
+    if (logicalRightOp.entryType.type !== ValueType.PRIMITIVE) {
+      ctx.err.error(new GeneratorError('cannot use reference in logical expression', node.children[1].token));
+    }
     logicalRightOp.toBoolean(ctx);
     if (isAnd) {
       // AND operator
@@ -344,6 +350,19 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
   }
   const lOp = generateExpression(ctx, node.children[0]);
   const rOp = generateExpression(ctx, node.children[1]);
+
+  if (lOp.entryType.type === ValueType.ARRAY_REF && rOp.entryType.type === ValueType.ARRAY) {
+    // TODO: Array reference assignment
+  }else if (lOp.entryType.type === ValueType.ARRAY_REF && rOp.entryType.type === ValueType.ARRAY_REF) {
+    // TODO: Array reference assignment
+  } else if (lOp.entryType.type !== ValueType.PRIMITIVE || rOp.entryType.type !== ValueType.PRIMITIVE) {
+    if (lOp.entryType.type !== ValueType.PRIMITIVE) {
+      ctx.err.error(new GeneratorError('left operand should be a value', node.children[0].token));
+    }
+    if (rOp.entryType.type !== ValueType.PRIMITIVE) {
+      ctx.err.error(new GeneratorError('right operand should be a value', node.children[1].token));
+    }
+  }
 
   const getConversionTargetType = (type1: PrimitiveType, type2: PrimitiveType) => {
     if (type1 === PrimitiveType.FLOAT || type2 === PrimitiveType.FLOAT) {
@@ -478,13 +497,14 @@ const generateExpressionFuncInvoke: generateRule<AttrExpr> = (ctx, node) => {
   }
 
   argList.forEach((arg, ind) => {
-    const val = generateExpression(ctx, arg).toValue(ctx);
+    const val = generateExpression(ctx, arg);
     const target = new QuadrupleArgArrayAddr(Q_NULL, new QuadrupleArgValue(PrimitiveType.INT, funcFrame));
 
     const paraInfo = funcInfo.parameterList[ind];
     if (paraInfo) {
       funcFrame += paraInfo.type.size;
-      ctx.addQuadruple(QuadrupleOperator.F_PARA, val, Q_NULL, target);
+      const targetVal = addTypeConversion(ctx, val, paraInfo.type.primitiveType, arg.token);
+      ctx.addQuadruple(QuadrupleOperator.F_PARA, targetVal, Q_NULL, target);
     } else {
       ctx.err.error(new GeneratorError('this argument exceeds the parameter count',
         arg.token));
@@ -512,10 +532,14 @@ const generateExpressionArrAccess: generateRule<AttrExpr> = (ctx, node) => {
   const arrayInfo = ctx.getEntryInfo(id);
 
   // assert the compatibility of size
+  if (node.children[1].children.length !== arrayInfo.asArr.dimension) {
+    ctx.err.error(new GeneratorError('incompatible array dimension for array access', node.token));
+  }
 
   let addrOffset: QuadrupleArg | undefined;
   node.children[1].children.map((dimNode, index) => {
-    const dimAttr = generateExpression(ctx, dimNode).toValue(ctx);
+    const dimAttr = generateExpression(ctx, dimNode);
+    const dimAttrValue = addTypeConversion(ctx, dimAttr, PrimitiveType.INT, dimNode.token);
     const arrLenRef = new QuadrupleArgArrayAddr(ctx.getEntry(id),
       new QuadrupleArgValue(PrimitiveType.INT, ARRAY_DIM_DEF_OFFSET + index * getPrimitiveSize(PrimitiveType.INT)));
     if (addrOffset) {
@@ -525,11 +549,11 @@ const generateExpressionArrAccess: generateRule<AttrExpr> = (ctx, node) => {
       const multiOffset = ctx.getTempVar();
       ctx.addQuadruple(QuadrupleOperator.I_MUL, addrOffset, arrLen, multiOffset, 'multiply dim size');
       const addOffset = ctx.getTempVar();
-      ctx.addQuadruple(QuadrupleOperator.I_ADD, multiOffset, dimAttr, addOffset, 'add dim offset');
+      ctx.addQuadruple(QuadrupleOperator.I_ADD, multiOffset, dimAttrValue, addOffset, 'add dim offset');
       addrOffset = addOffset;
     } else {
       // first dimension
-      addrOffset = dimAttr;
+      addrOffset = dimAttrValue;
     }
   });
   if (!addrOffset) {
@@ -650,7 +674,8 @@ const generateDeclarationArray: generateRule<IAttr> = (ctx, node) => {
     const dimExpr = generateExpression(ctx, dim);
     const dimRef = new QuadrupleArgArrayAddr(ctx.getEntry(arrayName),
       new QuadrupleArgValue(PrimitiveType.INT, index * getPrimitiveSize(PrimitiveType.INT) + ARRAY_DIM_DEF_OFFSET));
-    ctx.addQuadruple(QuadrupleOperator.A_ASS, dimExpr.toValue(ctx),
+    const dimExprValue = addTypeConversion(ctx, dimExpr, PrimitiveType.INT, dim.token);
+    ctx.addQuadruple(QuadrupleOperator.A_ASS, dimExprValue,
       Q_NULL, dimRef, 'Set array size of ' + index + ' dimension');
     if (size) {
       const temp = ctx.getTempVar();
