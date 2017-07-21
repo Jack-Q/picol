@@ -395,10 +395,10 @@ a.github-corner {
 
 .body>div {
   position: relative;
-  overflow-y: hidden;
 }
 
 .left-aside {
+  overflow-y: hidden;
   flex: 1;
   min-width: 220px;
 }
