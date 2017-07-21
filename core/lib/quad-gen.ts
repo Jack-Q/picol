@@ -933,14 +933,38 @@ const generateStatementSwitch: generateRule<AttrStat> = (ctx, node) => {
 };
 
 const generateStatementReturn: generateRule<IAttr> = (ctx, node) => {
-  const exprAttr = generateExpression(ctx, node.children[0]).toValue(ctx);
+  const exprAttr = generateExpression(ctx, node.children[0]);
+  const retValStatus = ctx.checkName('?ret');
+  if (!retValStatus.isDefined || !retValStatus.entry) {
+    ctx.err.error(new GeneratorError('return statement is only valid inside an function scope', node.token));
+    return attr.valid();
+  }
+  const retValInfo = retValStatus.entry;
   const retVal = ctx.getEntry('?ret');
-  ctx.addQuadruple(QuadrupleOperator.V_ASS, exprAttr, Q_NULL, retVal);
+  if ( retValInfo.asPrim.primitiveType === PrimitiveType.VOID) {
+    ctx.err.error(new GeneratorError('return statement cannot contain return value for void function', node.token));
+    ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
+    return attr.valid();
+  }
+  const attrValue = addTypeConversion(ctx, exprAttr, retValInfo.asPrim.primitiveType, node.token);
+  ctx.addQuadruple(QuadrupleOperator.V_ASS, attrValue, Q_NULL, retVal);
   ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
   return attr.valid();
 };
 
 const generateStatementReturnVoid: generateRule<IAttr> = (ctx, node) => {
+  const retValStatus = ctx.checkName('?ret');
+  if (!retValStatus.isDefined || !retValStatus.entry) {
+    ctx.err.error(new GeneratorError('return statement is only valid inside an function scope', node.token));
+    return attr.valid();
+  }
+  const retValInfo = retValStatus.entry;
+  const retVal = ctx.getEntry('?ret');
+  if ( retValInfo.asPrim.primitiveType !== PrimitiveType.VOID) {
+    ctx.err.error(new GeneratorError('return statement must contain a return value for non-void function', node.token));
+    ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
+    return attr.valid();
+  }
   ctx.addQuadruple(QuadrupleOperator.F_RET, Q_NULL, Q_NULL, Q_NULL);
   return attr.valid();
 };
