@@ -155,10 +155,9 @@ export default class AstExpr extends Vue {
   border-radius: 3px;
 }
 .expr-inline-node {
-  display: inline;
-  min-height: 25px;
   flex: 1;
   display: flex;
+  min-height: 25px;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;

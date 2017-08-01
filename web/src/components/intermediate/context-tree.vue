@@ -153,7 +153,6 @@ export default class ContextTree extends Vue {
 
 .variable-list {
   position: relative;
-  overflow: hidden;
   transition: all ease 400ms;
   max-height: 3000px;
 }
@@ -173,6 +172,7 @@ export default class ContextTree extends Vue {
 
 .variable-list.hide {
   padding: 0;
+  overflow: hidden;
   max-height: 45px;
 }
 
@@ -203,6 +203,11 @@ export default class ContextTree extends Vue {
   font-size: 0.8em;
   border-radius: 13px;
   z-index: 10;
+  transition: all ease 400ms;
+}
+
+.variable-list.hide .stack-offset{
+  opacity: 0;
 }
 
 .variable-type {
