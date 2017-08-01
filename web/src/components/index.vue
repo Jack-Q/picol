@@ -400,7 +400,7 @@ a.github-corner {
 .left-aside {
   overflow-y: hidden;
   flex: 1;
-  min-width: 220px;
+  min-width: 260px;
 }
 
 
