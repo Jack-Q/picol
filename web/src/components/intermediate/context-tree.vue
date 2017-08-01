@@ -78,7 +78,7 @@ import { Quadruple, ExecutionContext } from '../../../../core/main';
 export default class ContextTree extends Vue {
   @Prop contextTree = p({ type: Object })
   @Prop isRoot = p({ type: Boolean })
-  hideVariable = false;
+  hideVariable = !!this.isRoot;
   open = true;
   isEmpty(object: Object): boolean {
     return Object.keys(object).filter(k => k !== '__ob__').length > 0;
@@ -162,7 +162,7 @@ export default class ContextTree extends Vue {
   top: 0;
   line-height: 45px;
   left: 30px;
-  content: '(local symbols)';
+  content: '(symbols defined in this scope)';
   display: block;
   opacity: 0;
   z-index: -1;

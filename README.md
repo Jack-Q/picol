@@ -53,7 +53,6 @@ Currently, this project is still in progress. Some of unimplemented features are
   * [ ] Symbol management for nested context
   * [ ] More complete CLI
 * UI (PICOL)
-  * [ ] Local file as source and target
   * [ ] Memory view for sparse array in JavaScript
   * [ ] Mobile screen adaption
 
