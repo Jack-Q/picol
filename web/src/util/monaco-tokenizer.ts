@@ -1,5 +1,5 @@
 ///  path="monaco-editor/monaco.d.ts" />
-import picolLanguage from './picol-monarch-language';
+import {picolLanguage, picolLanguageCompletionItemProvider} from './picol-monarch-language';
 import picolSample from './picol-sample';
 
 const picolTheme: monaco.editor.IStandaloneThemeData = {
@@ -22,6 +22,7 @@ const registerLanguage = (monaco: any): void => {
   monaco.languages.register({ id: 'Picol' });
 
   monaco.languages.setMonarchTokensProvider('Picol', picolLanguage);
+  monaco.languages.registerCompletionItemProvider('Picol', picolLanguageCompletionItemProvider);
 
   monaco.editor.defineTheme('PicolTheme', picolTheme);
   monaco.editor.setTheme('PicolTheme');

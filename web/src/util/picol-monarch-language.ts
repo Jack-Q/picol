@@ -7,7 +7,7 @@ interface IPicolMonarchLanguage extends monaco.languages.IMonarchLanguage {
   symbols: RegExp;
 }
 
-const picolLanguage: IPicolMonarchLanguage = {
+export const picolLanguage: IPicolMonarchLanguage = {
 
   defaultToken: 'invalid',
   keywords: [
@@ -101,4 +101,29 @@ const picolLanguage: IPicolMonarchLanguage = {
   tokenPostfix: '',
 } as any; // use any to suppress tsc complaint about the short hands declaration
 
-export default picolLanguage;
+// Autocomplete service for Picol Language
+export const picolLanguageCompletionItemProvider: monaco.languages.CompletionItemProvider = {
+  provideCompletionItems: (model: monaco.editor.IReadOnlyModel,
+                           position: monaco.Position,
+                           token: monaco.CancellationToken) => {
+    return [
+      // {
+      //   label: 'simpleText',
+      //   kind: monaco.languages.CompletionItemKind.Text,
+      // }, {
+      //   label: 'testing',
+      //   kind: monaco.languages.CompletionItemKind.Keyword,
+      //   insertText: {
+      //     value: 'testing(${1:condition})',
+      //   },
+      // }, {
+      //   label: 'ifelse',
+      //   kind: monaco.languages.CompletionItemKind.Snippet,
+      //   insertText: {
+      //     value: ['if (${1:condition}) {', '\t$0', '} else {', '\t', '}'].join('\n'),
+      //   },
+      //   documentation: 'If-Else Statement',
+      // },
+    ];
+  },
+};
