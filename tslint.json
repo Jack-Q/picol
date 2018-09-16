@@ -1,17 +1,17 @@
 {
-    "defaultSeverity": "error",
-    "extends": [
-        "tslint:recommended"
-    ],
-    "jsRules": {},
-    "rules": {
-        "quotemark": [true, "single", "jsx-double"],
-        "no-reference": false,
-        "object-literal-sort-keys": false,
-        "one-variable-per-declaration": [false],
-        "no-console": [false],
-        "max-classes-per-file": [false],
-        "no-var-requires": false
-    },
-    "rulesDirectory": []
+  "defaultSeverity": "error",
+  "extends": [
+    "tslint:recommended"
+  ],
+  "jsRules": {},
+  "rules": {
+    "quotemark": [true, "single", "jsx-double"],
+    "no-reference": false,
+    "object-literal-sort-keys": false,
+    "one-variable-per-declaration": [false],
+    "no-console": [false],
+    "max-classes-per-file": [false],
+    "no-var-requires": false
+  },
+  "rulesDirectory": []
 }
