@@ -151,6 +151,20 @@ export class Quadruple {
   public result: QuadrupleArg;
   public comment: string = '';
 
+  public constructor(
+    operator: QuadrupleOperator,
+    argument1: QuadrupleArg,
+    argument2: QuadrupleArg,
+    result: QuadrupleArg,
+    comment: string = '',
+  ) {
+    this.operator = operator;
+    this.argument1 = argument1;
+    this.argument2 = argument2;
+    this.result = result;
+    this.comment = comment;
+  }
+
   public get operatorName() {
     return QuadrupleOperator[this.operator];
   }

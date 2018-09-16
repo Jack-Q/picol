@@ -34,19 +34,18 @@ const arraySet = <T>(arr: T[], ind: number, ele: T): void => {
 };
 
 export class Executor {
-  public pc: number;
-  public frameBase: number;
-  public stack: number[];
-  public stackTop: number;
-  public heapTop: number;
-  public heap: number[];
-  public temp: number[];
-  public program: Quadruple[];
-  public console: IConsoleMessage[];
+  public pc: number = 0;
+  public frameBase: number = 0;
+  public stack: number[] = [];
+  public stackTop: number = 0;
+  public heapTop: number = 0;
+  public heap: number[] = [];
+  public temp: number[] = [];
+  public program: Quadruple[] = [];
+  public console: IConsoleMessage[] = [];
   public parameterProvider: IExecutionParameterProvider;
 
   constructor(provider: IExecutionParameterProvider, program?: Quadruple[]) {
-    this.console = [];
     this.parameterProvider = provider;
     if (program) {
       this.program = program;

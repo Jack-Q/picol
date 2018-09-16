@@ -29,23 +29,22 @@ class AttrStat implements IAttr {
 
 class AttrExpr implements IAttr {
   public static newBoolExpr(trueChain: number, falseChain: number): AttrExpr {
-    const expr = new AttrExpr();
+    const expr = new AttrExpr(createValueType.prim(PrimitiveType.BOOL));
     expr.trueChain = trueChain;
     expr.falseChain = falseChain;
     expr.isBoolean = true;
-    expr.entryType = createValueType.prim(PrimitiveType.BOOL);
     return expr;
   }
 
   public static newPrimValue(type: PrimitiveType, value: any): AttrExpr {
     const quadValue = new QuadrupleArgValue(type, value);
     console.log('set value type as ' + PrimitiveType[type]);
-    return new AttrExpr(quadValue, createValueType.prim(type));
+    return new AttrExpr(createValueType.prim(type), quadValue);
   }
 
   public static newQuadrupleRef(value: QuadrupleArg, type: ValueTypeInfo): AttrExpr {
     // simple wrapper for the original value
-    return new AttrExpr(value, type);
+    return new AttrExpr(type, value);
   }
 
   public isValid = true;
@@ -55,11 +54,9 @@ class AttrExpr implements IAttr {
   public falseChain = 0;
   public entryType: ValueTypeInfo;
 
-  private constructor(value?: QuadrupleArg, type?: ValueTypeInfo) {
+  private constructor(type: ValueTypeInfo, value?: QuadrupleArg) {
+    this.entryType = type;
     this.generatedValue = value;
-    if (type) {
-      this.entryType = type;
-    }
   }
 
   private get value(): QuadrupleArg {
@@ -353,7 +350,7 @@ const generateExpressionBinary: generateRule<AttrExpr> = (ctx, node) => {
 
   if (lOp.entryType.type === ValueType.ARRAY_REF && rOp.entryType.type === ValueType.ARRAY) {
     // TODO: Array reference assignment
-  }else if (lOp.entryType.type === ValueType.ARRAY_REF && rOp.entryType.type === ValueType.ARRAY_REF) {
+  } else if (lOp.entryType.type === ValueType.ARRAY_REF && rOp.entryType.type === ValueType.ARRAY_REF) {
     // TODO: Array reference assignment
   } else if (lOp.entryType.type !== ValueType.PRIMITIVE || rOp.entryType.type !== ValueType.PRIMITIVE) {
     if (lOp.entryType.type !== ValueType.PRIMITIVE) {

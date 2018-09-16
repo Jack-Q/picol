@@ -9,7 +9,7 @@ import { Component, Vue } from 'av-ts';
 
 @Component()
 export default class App extends Vue {
-  name: 'app'
+  name: string = 'app'
 }
 </script>
 

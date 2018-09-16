@@ -20,13 +20,13 @@ export class RangePosition {
     return this.endOffset - this.startOffset;
   }
 
-  public startOffset: number;
-  public startLine: number;
-  public startCol: number;
+  public startOffset: number = 0;
+  public startLine: number = 0;
+  public startCol: number = 0;
 
-  public endOffset: number;
-  public endLine: number;
-  public endCol: number;
+  public endOffset: number = 0;
+  public endLine: number = 0;
+  public endCol: number = 0;
   public markStartPoint = (point: IPointPosition): RangePosition => {
     this.startOffset = point.offsetStart;
     this.startCol = point.col;

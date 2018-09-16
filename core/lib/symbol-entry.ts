@@ -37,9 +37,15 @@ export class ValueTypeInfo extends SymbolEntryInfo {
   public dim: number = 0;
   public primitiveType: PrimitiveType;
 
-  constructor(type: PrimitiveType) {
+  constructor(
+    primitiveType: PrimitiveType,
+    type: ValueType = ValueType.PRIMITIVE,
+    isVoid: boolean = false,
+  ) {
     super();
-    this.primitiveType = type;
+    this.primitiveType = primitiveType;
+    this.type = type;
+    this.isVoid = isVoid;
   }
 
   public get size(): number {
@@ -49,9 +55,7 @@ export class ValueTypeInfo extends SymbolEntryInfo {
 
 class VoidType extends ValueTypeInfo {
   constructor() {
-    super(PrimitiveType.VOID);
-    this.isVoid = true;
-    this.type = ValueType.VOID;
+    super(PrimitiveType.VOID, ValueType.VOID, true);
   }
   public toString() {
     return PrimitiveType[this.primitiveType];
@@ -60,8 +64,7 @@ class VoidType extends ValueTypeInfo {
 
 class TypeInfoPrimitive extends ValueTypeInfo {
   constructor(type: PrimitiveType) {
-    super(type);
-    this.type = ValueType.PRIMITIVE;
+    super(type, ValueType.PRIMITIVE, false);
   }
   public toString() {
     return PrimitiveType[this.primitiveType];
@@ -71,9 +74,8 @@ class TypeInfoPrimitive extends ValueTypeInfo {
 class TypeInfoArray extends ValueTypeInfo {
   public dimension: number;
   constructor(type: PrimitiveType, dim: number) {
-    super(type);
+    super(type, ValueType.ARRAY);
     this.dimension = dim;
-    this.type = ValueType.ARRAY;
   }
   get size() {
     // stack consumption: [ref-to-heap][dim-1][dim-2][dim-n]
@@ -94,9 +96,8 @@ class TypeInfoArray extends ValueTypeInfo {
 class TypeInfoArrayRef extends ValueTypeInfo {
   public dimension: number;
   constructor(type: PrimitiveType, dim: number) {
-    super(type);
+    super(type, ValueType.ARRAY_REF);
     this.dimension = dim;
-    this.type = ValueType.ARRAY_REF;
   }
   get size() {
     return getPrimitiveSize('ref');
@@ -107,9 +108,9 @@ class TypeInfoArrayRef extends ValueTypeInfo {
 }
 
 class TypeInfoFunction extends SymbolEntryInfo {
-  public returnType: ValueTypeInfo;
+  public returnType: ValueTypeInfo =  new VoidType();
   public parameterList: IFunctionParameter[] = [];
-  public entryAddress: number;
+  public entryAddress: number = 0;
   public toString() {
     return '(' +
       (this.parameterList ? this.parameterList.map((p) => p.type && p.type.toString()).join(',') : '***')
@@ -155,7 +156,7 @@ export class SymbolEntry {
     return this.info as TypeInfoArrayRef;
   }
 
-  public get typeString(): string{
+  public get typeString(): string {
     return SymbolEntryType[this.type];
   }
 

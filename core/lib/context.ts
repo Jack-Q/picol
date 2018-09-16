@@ -197,12 +197,7 @@ export class GeneratorContext {
 
   public addQuadruple(op: QuadrupleOperator, arg1: QuadrupleArg, arg2: QuadrupleArg, result: QuadrupleArg,
                       comment: string = '') {
-    const quadruple = new Quadruple();
-    quadruple.operator = op;
-    quadruple.argument1 = arg1;
-    quadruple.argument2 = arg2;
-    quadruple.result = result;
-    quadruple.comment = comment;
+    const quadruple = new Quadruple(op, arg1, arg2, result, comment);
     this.quadrupleList.push(quadruple);
   }
 
