@@ -48,8 +48,8 @@
 
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 import fileModel, { IEditingFile } from '../../model/file-model';
-import ListItem from './list-item';
-import InlineAction from './inline-action';
+import ListItem from './list-item.vue';
+import InlineAction from './inline-action.vue';
 
 @Component({
   name: 'left-panel',

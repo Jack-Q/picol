@@ -32,32 +32,32 @@
       </div>
       <div class="section">console</div>
       <div class="console">
-        <template v-for="err in executor.console.map(i => i).reverse()">
-          <div v-if="getSeverity(err.severity) === 'INFO'" class="info info-message">
+        <template v-for="(err, i) in executor.console.map(i => i).reverse()">
+          <div :key="i" v-if="getSeverity(err.severity) === 'INFO'" class="info info-message">
             <div class="icon">
               <ui-icon>info</ui-icon>
             </div>
             {{err.message}}
           </div>
-          <div v-else-if="getSeverity(err.severity) === 'WARN'" class="info info-warning">
+          <div :key="i" v-else-if="getSeverity(err.severity) === 'WARN'" class="info info-warning">
             <div class="icon">
               <ui-icon>warning</ui-icon>
             </div>
             <div class="message">{{err.message}}</div>
           </div>
-          <div v-else-if="getSeverity(err.severity) === 'ERROR'" class="info info-error">
+          <div :key="i" v-else-if="getSeverity(err.severity) === 'ERROR'" class="info info-error">
             <div class="icon">
               <ui-icon>error</ui-icon>
             </div>
             <div class="message">{{err.message}}</div>
           </div>
-          <div v-else-if="getSeverity(err.severity) === 'FATAL'" class="info info-fatal">
+          <div :key="i" v-else-if="getSeverity(err.severity) === 'FATAL'" class="info info-fatal">
             <div class="icon">
               <ui-icon>block</ui-icon>
             </div>
             <div class="message">{{err.message}}</div>
           </div>
-          <div v-else>
+          <div :key="i" v-else>
             {{getSeverity(err.severity)}} {{err.severity}}
             <div class="message">{{err.message}}</div>
           </div>
@@ -87,26 +87,35 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
-import { Quadruple, Executor, ErrorSeverity, buildInFunctions, IExecutionParameterProvider } from '../../../../core/main';
+import { Component, Vue, Lifecycle, p, Prop, Watch } from "av-ts";
+import {
+  Quadruple,
+  Executor,
+  ErrorSeverity,
+  buildInFunctions,
+  IExecutionParameterProvider
+} from "../../../../core/main";
 
-import QuadViewer from '../intermediate/quad-viewer';
-import MemoryView from './memory-view';
-import ValueResolverDialog from './value-resolver-dialog';
+import QuadViewer from "../intermediate/quad-viewer.vue";
+import MemoryView from "./memory-view.vue";
+import ValueResolverDialog from "./value-resolver-dialog.vue";
 
 type ValueResolver<T> = (val: T | PromiseLike<T>) => void;
-type RequestedValueResolver = ValueResolver<boolean> | ValueResolver<string> | ValueResolver<number>;
+type RequestedValueResolver =
+  | ValueResolver<boolean>
+  | ValueResolver<string>
+  | ValueResolver<number>;
 
 @Component({
-  name: 'execution',
+  name: "execution",
   components: {
     QuadViewer,
     MemoryView,
-    ValueResolverDialog,
-  },
+    ValueResolverDialog
+  }
 })
 export default class Execution extends Vue {
-  @Prop program = p({ type: Array })
+  @Prop program = p({ type: Array });
 
   autoExecute: boolean = false;
   speed: number = 0;
@@ -120,18 +129,21 @@ export default class Execution extends Vue {
   }
 
   getExecutionParameterProvider(): IExecutionParameterProvider {
-    const showPopup = (resolver: RequestedValueResolver, type: string): void => {
+    const showPopup = (
+      resolver: RequestedValueResolver,
+      type: string
+    ): void => {
       console.log(this.$refs);
-      (this.$refs['resolver'] as ValueResolverDialog).resetValue();
+      (this.$refs["resolver"] as ValueResolverDialog).resetValue();
       this.requestedValueResolver = resolver;
       this.requestedValueType = type;
       this.popupParameterRequest = true;
-    }
+    };
     return {
-      getBoolean: () => new Promise((res, rej) => showPopup(res, 'getBoolean')),
-      getChar: () => new Promise((res, rej) => showPopup(res, 'getChar')),
-      getInteger: () => new Promise((res, rej) => showPopup(res, 'getInt')),
-      getFloat: () => new Promise((res, rej) => showPopup(res, 'getFloat')),
+      getBoolean: () => new Promise((res, rej) => showPopup(res, "getBoolean")),
+      getChar: () => new Promise((res, rej) => showPopup(res, "getChar")),
+      getInteger: () => new Promise((res, rej) => showPopup(res, "getInt")),
+      getFloat: () => new Promise((res, rej) => showPopup(res, "getFloat"))
     };
   }
 
@@ -151,17 +163,21 @@ export default class Execution extends Vue {
   executor: Executor = new Executor(this.getExecutionParameterProvider());
   autoExecuteHandle = 0;
 
-  @Lifecycle beforeUpdate() {
+  @Lifecycle
+  beforeUpdate() {
     const program = this.program as Quadruple[];
     if (!this.executor) {
-      this.executor = new Executor(this.getExecutionParameterProvider(), program);
+      this.executor = new Executor(
+        this.getExecutionParameterProvider(),
+        program
+      );
     }
     if (this.executor.program !== this.program) {
       // after loading an newer version of program, the local state also requires a reset
       this.executor.load(program);
       this.reset();
     }
-    (this.$refs['slider'] as any).refreshSize();
+    (this.$refs["slider"] as any).refreshSize();
   }
 
   toggleAutoExecute(autoExecute: boolean) {
@@ -179,8 +195,10 @@ export default class Execution extends Vue {
 
   autoExecuteCallback() {
     return this.executor.step().then(() => {
-      this.autoExecuteHandle =
-        setTimeout(() => this.autoExecuteCallback(), 1000 * this.calcSpeed);
+      this.autoExecuteHandle = setTimeout(
+        () => this.autoExecuteCallback(),
+        1000 * this.calcSpeed
+      );
     });
   }
 
@@ -202,7 +220,9 @@ export default class Execution extends Vue {
   }
 
   getBuildInFunc() {
-    return this.executor.pc < 0 ? buildInFunctions.find(f => f.id === this.executor.pc) : false;
+    return this.executor.pc < 0
+      ? buildInFunctions.find(f => f.id === this.executor.pc)
+      : false;
   }
 }
 </script>
@@ -254,7 +274,7 @@ pre {
   position: relative;
 }
 
-.program>div {
+.program > div {
   position: absolute;
   top: 0;
   bottom: 0;

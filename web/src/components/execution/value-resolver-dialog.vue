@@ -60,10 +60,10 @@ import { Component, Vue, Lifecycle, p, Prop, Watch } from 'av-ts';
 export default class ValueResolverDialog extends Vue {
   @Prop valueType = p({ type: String, required: true })
 
-  charValue: string;
-  intValue: number;
-  floatNumber: number;
-  boolValue: boolean;
+  charValue: string = "";
+  intValue: number = 0;
+  floatNumber: number = 0.0;
+  boolValue: boolean = false;
 
   resetValue() {
     this.charValue="";

@@ -10,17 +10,17 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import AstNode from './ast-node';
+import { Component, Vue, Lifecycle, p, Prop } from "av-ts";
+import AstNode from "./ast-node.vue";
 
 @Component({
-  name: 'ast-viewer',
+  name: "ast-viewer",
   components: {
     AstNode
   }
 })
 export default class AstViewer extends Vue {
-  @Prop ast = p({type: Object})
+  @Prop public ast = p({ type: Object });
 }
 </script>
 

@@ -44,11 +44,14 @@
               reference to {{n.asArrRef.dimension}}-dimension array
             </span>
             <span v-else-if="n.typeString == 'FUNCTION'" class="variable-type function">
-              <pre>{{n.info.toString()}}</pre> function, entry at: {{n.info.entryAddress}}{{n.info.entryAddress
-              < 0 ? ', defined by language' : ''}} </span>
-                <span v-else class="variable-type">
-                  <pre>{{n.info.toString()}}</pre>
-                </span>
+              <pre>{{n.info.toString()}}</pre> 
+              function, entry at: 
+              {{n.info.entryAddress}}
+              {{(0 > n.info.entryAddress) ? ', defined by language' : ''}} 
+            </span>
+            <span v-else class="variable-type">
+              <pre>{{n.info.toString()}}</pre>
+            </span>
           </div>
         </div>
         <div v-else>
@@ -67,32 +70,33 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
-import { Quadruple, ExecutionContext } from '../../../../core/main';
+import { Component, Vue, Lifecycle, p, Prop } from "av-ts";
+import { Quadruple, ExecutionContext } from "../../../../core/main";
 
 @Component({
-  name: 'context-tree',
-  components: {
-  },
+  name: "context-tree",
+  components: {}
 })
 export default class ContextTree extends Vue {
-  @Prop contextTree = p({ type: Object })
-  @Prop isRoot = p({ type: Boolean })
+  @Prop contextTree = p({ type: Object });
+  @Prop isRoot = p({ type: Boolean });
   hideVariable = !!this.isRoot;
   open = true;
   isEmpty(object: Object): boolean {
-    return Object.keys(object).filter(k => k !== '__ob__').length > 0;
+    return Object.keys(object).filter(k => k !== "__ob__").length > 0;
   }
   saveContext(): void {
     if (!this.contextTree) {
       return;
     }
     const content = (this.contextTree as ExecutionContext).dump(2);
-    const helperElement = document.createElement('a');
-    helperElement.download = 'context.txt';
-    helperElement.href = window.URL.createObjectURL(new Blob([content], {
-      type: 'octet/stream',
-    }));
+    const helperElement = document.createElement("a");
+    helperElement.download = "context.txt";
+    helperElement.href = window.URL.createObjectURL(
+      new Blob([content], {
+        type: "octet/stream"
+      })
+    );
     helperElement.click();
   }
 }
@@ -162,7 +166,7 @@ export default class ContextTree extends Vue {
   top: 0;
   line-height: 45px;
   left: 30px;
-  content: '(symbols defined in this scope)';
+  content: "(symbols defined in this scope)";
   display: block;
   opacity: 0;
   z-index: -1;
@@ -176,7 +180,7 @@ export default class ContextTree extends Vue {
   max-height: 45px;
 }
 
-.variable-list.hide>div {
+.variable-list.hide > div {
   opacity: 0.3;
   filter: blur(2px);
 }
@@ -206,7 +210,7 @@ export default class ContextTree extends Vue {
   transition: all ease 400ms;
 }
 
-.variable-list.hide .stack-offset{
+.variable-list.hide .stack-offset {
   opacity: 0;
 }
 
@@ -252,7 +256,7 @@ pre.gen {
 }
 
 .context-body-wrapper::before {
-  content: '';
+  content: "";
   position: absolute;
   display: block;
   left: 8px;

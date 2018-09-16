@@ -32,7 +32,7 @@ import { Quadruple, QuadrupleArgType } from '../../../../core/main';
   name: 'quad-viewer'
 })
 export default class QuadViewer extends Vue {
-  @Prop quadList = p({type: Array})
+  @Prop quadList = p<Quadruple[]>({type: Array})
   @Prop highlight = p({type: Number})
 
   @Lifecycle mounted() { 

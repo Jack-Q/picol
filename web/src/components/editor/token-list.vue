@@ -45,7 +45,7 @@ import { TokenType, Token, TokenTypeUtil, RangePosition } from '../../../../core
   name: 'token-list'
 })
 export default class TokenList extends Vue {
-  @Prop tokenList = p({type: Array})
+  @Prop tokenList = p<Token[]>({type: Array})
 
   filter=''
 

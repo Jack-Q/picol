@@ -13,7 +13,7 @@ export interface IEditingFile {
 const STORAGE_KEY = 'file-model';
 
 class FileModel {
-  public current: number;
+  public current: number = 0;
   public fileList: IEditingFile[] = [];
 
   public get templateList(): string[] {

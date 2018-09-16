@@ -131,18 +131,18 @@
       <div class="node-header"><ui-icon>help_outline</ui-icon>Condition</div>
       <ast-expr :ast='ast.children[0]' />
     </div>
-    <template v-for="node in ast.children[1].children">
-      <div v-if="getNodeType(node) === 'SEG_CASE_LABEL'" class="node-block expr-inline-node">
+    <template v-for="(node, i) in ast.children[1].children">
+      <div :key="i" v-if="getNodeType(node) === 'SEG_CASE_LABEL'" class="node-block expr-inline-node">
         <div class="node-label"></div>
         <div class="node-header"><ui-icon>label</ui-icon></div>
         <ast-expr :ast='node.children[0]' />
       </div>
-      <div v-else-if="getNodeType(node) === 'SEG_DEFAULT_LABEL'" class="node-block expr-inline-node">
+      <div :key="i" v-else-if="getNodeType(node) === 'SEG_DEFAULT_LABEL'" class="node-block expr-inline-node">
         <div class="node-label"></div>
         <div class="node-header"><ui-icon>label_outline</ui-icon></div>
         Default
       </div>
-      <ast-node v-else :ast='node'></ast-node>
+      <ast-node :key="i" v-else :ast='node'></ast-node>
     </template>
   </div>
   <div v-else-if="nodeType === 'STAT_WHILE'" class='node-block'>
@@ -221,7 +221,7 @@
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 import { ParseNode, ParseNodeType, TokenType, PrimitiveType } from '../../../../core/main';
-import AstExpr from './ast-expr';
+import AstExpr from './ast-expr.vue';
 
 @Component({
   name: 'ast-node',

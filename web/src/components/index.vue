@@ -74,14 +74,14 @@ import { Component, Vue, Lifecycle } from 'av-ts';
 import fileModel from '../model/file-model';
 import MonacoTokenizer from '../util/monaco-tokenizer';
 
-import ErrorList from './editor/error-list';
-import MonacoEditor from './editor/monaco-editor';
-import TokenList from './editor/token-list';
-import FilePanel from './file-panel/file-panel';
-import AstViewer from './syntax/ast-viewer';
-import Intermediate from './intermediate/intermediate';
-import QuadViewer from './intermediate/quad-viewer';
-import Execution from './execution/execution';
+import ErrorList from './editor/error-list.vue';
+import MonacoEditor from './editor/monaco-editor.vue';
+import TokenList from './editor/token-list.vue';
+import FilePanel from './file-panel/file-panel.vue';
+import AstViewer from './syntax/ast-viewer.vue';
+import Intermediate from './intermediate/intermediate.vue';
+import QuadViewer from './intermediate/quad-viewer.vue';
+import Execution from './execution/execution.vue';
 
 import core, { Token, TokenType, ParseNode, Quadruple, ExecutionContext, PicolError, RangePosition } from '../../../core/main';
 
@@ -98,7 +98,7 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
   endLineNumber: t.position.endLine || t.position.startLine,
   endColumn: t.position.endCol || t.position.startCol + t.literal.length,
   message,
-  severity: monaco.Severity.Error,
+  severity: monaco.MarkerSeverity.Error,
   source: source
 });
 
@@ -116,7 +116,7 @@ const createMarker = (source: string, message: string, t: Token): monaco.editor.
   },
 })
 export default class Index extends Vue {
-  editor: monaco.editor.ICodeEditor;
+  editor?: monaco.editor.ICodeEditor = undefined;
   editorOptions = MonacoTokenizer.defaultMonacoEditorOptions;
   ast: ParseNode | null = null;
   tokenList: Token[] = [];
@@ -165,7 +165,7 @@ export default class Index extends Vue {
   @Lifecycle beforeUpdate() {
     // update model selection
     const current = fileModel.currentFile;
-    if (!current.model || current.model !== this.editor.getModel()) {
+    if (!current.model || !this.editor || current.model !== this.editor.getModel()) {
       if (this.editor) {
         if (!current.model) {
           current.model = monaco.editor.createModel(current.src, 'Picol');
@@ -250,6 +250,7 @@ export default class Index extends Vue {
   }
 
   selectPosition(pos: RangePosition) {
+    if(!this.editor) throw new Error("editor operation triggered before editor initialization");
     this.editor.setSelection({
       startLineNumber: pos.startLine,
       startColumn: pos.startCol,

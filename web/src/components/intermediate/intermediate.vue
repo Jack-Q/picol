@@ -19,8 +19,8 @@
 <script lang="ts">
 import { Component, Vue, Lifecycle, p, Prop } from 'av-ts';
 import { Quadruple } from '../../../../core/main';
-import ContextTree from './context-tree';
-import QuadViewer from './quad-viewer';
+import ContextTree from './context-tree.vue';
+import QuadViewer from './quad-viewer.vue';
 
 
 @Component({

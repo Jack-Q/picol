@@ -1,10 +1,11 @@
-import KeenUI from 'keen-ui';
-import 'keen-ui/dist/keen-ui.css';
 import Vue from 'vue';
 import Router from 'vue-router';
-import App from './App';
-import Index from './components/index';
-import fileModel from './model/file-model';
+
+import KeenUI from 'keen-ui';
+import 'keen-ui/dist/keen-ui.css';
+
+import App from './App.vue';
+import Index from './components/index.vue';
 import './resource/font.css';
 
 Vue.use(KeenUI);
